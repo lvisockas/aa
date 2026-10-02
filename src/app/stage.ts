@@ -284,8 +284,10 @@ export class Stage<C extends BaseConfig = BaseConfig> {
       const a = this.avatars[p.index];
       const t = now();
       if (!p.moved) {
-        if (t - p.t < 0.28) a.boop((p as Press & { q?: Vec3 }).q ?? [0, 0.5, 0.3], t);
-        else a.pressEnd(t, true);
+        if (t - p.t < 0.28) {
+          a.pressEnd(t, false);
+          a.boop((p as Press & { q?: Vec3 }).q ?? [0, 0.5, 0.3], t);
+        } else a.pressEnd(t, true);
       } else a.pressEnd(t, false);
       this.press = null;
       el.dataset.press = 'false';
@@ -308,9 +310,12 @@ export class Stage<C extends BaseConfig = BaseConfig> {
         this.lead.jump(1.3, t);
         this.shownAt = performance.now() / 1000;
       }
+      // a press on the character leaving the stage must not leave it squashing
+      if (this.press) this.avatars[this.press.index]?.pressEnd(t, false);
       this.shown = this.lead ?? null;
       this.placed = false;
       this.press = null;
+      this.el.dataset.press = 'false';
     }
     this.compose(dt);
     const cam = this.updateCamera(dt, pointer, reducedMotion ? 0 : 1);
@@ -372,10 +377,12 @@ export class Stage<C extends BaseConfig = BaseConfig> {
     ctx.setTransform(ppu, 0, 0, -ppu, (feet.x - this.rect.left) * dpr, (feet.y - this.rect.top) * dpr);
     // tilt about the middle of the body, squash and stretch about the feet
     const roll = (a.home.roll ?? 0) + a.pose.roll;
-    ctx.translate(0, 0.45);
-    ctx.rotate(roll);
-    ctx.translate(0, -0.45);
-    ctx.scale(f.squash[0], f.squash[1]);
+    if (!this.family.pixelMotion) {
+      ctx.translate(0, 0.45);
+      ctx.rotate(roll);
+      ctx.translate(0, -0.45);
+      ctx.scale(f.squash[0], f.squash[1]);
+    }
     const canvas = (id: string, cw: number, ch: number) => {
       let c = this.layers2d.get(id);
       if (!c) {
@@ -390,7 +397,7 @@ export class Stage<C extends BaseConfig = BaseConfig> {
       c.clearRect(0, 0, cw, ch);
       return c;
     };
-    this.family.draw2d!(ctx, a.config, a.pose, a.face, { t, px: 1 / ppu, size: [w, h], canvas });
+    this.family.draw2d!(ctx, a.config, a.pose, a.face, { t, px: 1 / ppu, size: [w, h], canvas, squash: [f.squash[0], f.squash[1]], roll });
   }
 
   /** screen position of an avatar's head (tests, tooling) */

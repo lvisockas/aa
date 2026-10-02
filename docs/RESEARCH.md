@@ -96,6 +96,29 @@ headband placement interpret the text description rather than copy the artwork. 
 palette is in the spirit of the RebelMouse site; exact brand colour values were not verified. The mark on
 the brand flag is an original tapered-snout mouse head, not a copy of any existing logo.
 
+### 1.8 Clawd · Claude Code's terminal crab
+
+Clawd is the 8-bit crab that greets you at the top of a Claude Code session, in rgb(215, 119, 87) on the
+terminal's dark background. Codrops published a frame-by-frame rebuild of Claude's mascot animations in
+SVG and GSAP (May 2026); that page could not be fetched from this environment, so the motion here is an
+independent take. The sprite comes from Claude Code's quadrant-block artwork:
+
+```
+ ▐▛███▜▌
+▝▜█████▛▘
+  ▘▘ ▝▝
+```
+
+Each quadrant character is 2×2 pixels and a terminal cell is twice as tall as it is wide, so each pixel is
+one grid column by two grid rows: a 16-column body with two tall slit eyes, 2×2 arm nubs and four legs.
+The rebuild keeps that resolution and animates it the way pixel art animates. Everything moves in whole
+pixels: the eyes step one pixel towards the cursor, blinks shrink the slits, the legs scuttle in two frames,
+the arms type or wave, hops snap to the pixel grid, and squash duplicates or drops whole rows (the sprite
+is painted at native size and scaled with nearest-neighbour sampling). A terminal status line underneath
+plays the role of the CLI: a sparkle spinner that grows and turns its arms next to a playful verb while it
+works, an approval prompt, a green check when done. Variants: classic terracotta, green phosphor with
+headphones, amber with an antenna; phosphor glow and CRT scanlines are adjustable.
+
 ### 1.7 Doodles · five 2D art styles (original)
 
 Five 2D characters, each in its own simple art style, built from a handful of shapes and drawn by
@@ -196,6 +219,7 @@ So the renderer is now a hybrid, and each family uses the technique that fits it
 | Dots, Grok Bot, Muse, Rebels | SDF ray marching | soft blends, live morphs, dents where you click, volumetric fur |
 | Polydots | triangle rasterisation, 4x MSAA | it is polygons; the mesh is rebuilt on the CPU each frame from the same parameters |
 | Doodles | Canvas2D | flat 2D art styles need paths, strokes, patterns and blend modes, not 3D |
+| Clawd | Canvas2D, nearest-neighbour pixel sprite | the original is terminal block art; motion snaps to its pixel grid |
 
 All three share one canvas compositor, the same camera, lights and tone mapping (the lighting code
 lives in one `lighting.glsl` used by both GPU paths), the same picking API (exact SDF picking, a CPU
@@ -295,8 +319,9 @@ Overlay (2D canvas): emotes and name tags, projected from 3D
   packs finite parameters and survives boop, hold, pet and trick without NaNs.
 * `npm run interact` drives headless Chromium: gaze follows the pointer left and right, a click GPU-picks
   and selects the right avatar and dents it, the inspector follows, and the state bar works. This is run
-  for all six families, plus family-specific checks (shape morphs, accessories, species presets, the
-  aimed megaphone, faceted-body morphs, 2D style switching).
+  for all seven families, plus family-specific checks (shape morphs, accessories, species presets, the
+  aimed megaphone, faceted-body morphs, 2D style switching, the terminal crab's states). A unit test
+  guards against the click-then-squash bug (a quick click used to leave the hold timer running).
 * `npm run shots` takes screenshots of any route and size in software GL, with a GPU sync before capture.
 * `npm run bench` reports steady-state frame cost per family in software GL (480×300, low quality):
   Grok ~200 ms, Dots and Muse ~340 ms, Rebels ~440 ms per frame for the ray-marched families, against
@@ -330,6 +355,7 @@ Overlay (2D canvas): emotes and name tags, projected from 3D
 * The Gadgeteer: [Meta Muse Charm keychain](https://the-gadgeteer.com/2026/09/24/meta-muse-charm-ai-assistant-keychain/)
 * Runtime Wire: [Meta gives Muse a live avatar](https://runtimewire.com/article/meta-muse-realtime-avatar)
 * Design Compass: [Why AI agents are getting cute](https://designcompass.org/en/2026/09/30/why-ai-agents-are-getting-cute/)
+* Codrops: [Reverse-engineering Claude AI's mascot animations with SVG and GSAP](https://tympanus.net/codrops/2026/05/05/reverse-engineering-claude-ais-mascot-animations-with-svg-and-gsap/) · Stark Insider: [Clawd, the retro mascot of the command line](https://www.starkinsider.com/2025/10/clawd-ai-retro-mascot-command-line.html)
 * RebelMouse: [Creative agency](https://www.rebelmouse.com/creative-agency) (mascot description) · [2026 platform updates](https://www.rebelmouse.com/2026-platform-updates) · [AI CMS](https://www.rebelmouse.com/ai-cms) · [The agentic website for the AI era](https://www.rebelmouse.com/agentic-website-ai-era) · [How RebelMouse built an agentic CMS](https://www.rebelmouse.com/how-rebelmouse-built-agentic-cms)
 * American Express OPEN Forum: [A HuffPo veteran creates a new content management site](https://www.americanexpress.com/us/small-business/openforum/articles/a-huffpo-veteran-creates-a-new-content-management-site/)
 * journalism.co.uk: [News outlets given 'social front pages' using new RebelMouse platform](https://www.journalism.co.uk/news-outlets-show-social-sharing-with-new-rebelmouse-platform/)

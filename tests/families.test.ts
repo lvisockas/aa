@@ -6,6 +6,7 @@ import { rng } from '../src/engine/math';
 import { rebel } from '../src/families/rebel';
 import { poly } from '../src/families/poly';
 import { doodle, doodleItems } from '../src/families/doodle';
+import { clawd } from '../src/families/clawd';
 import { VERT_FLOATS } from '../src/engine/mesh';
 import { FAMILY_LIST } from './helpers';
 
@@ -102,7 +103,7 @@ const mockCtx = (): CanvasRenderingContext2D => {
 
 test('every doodle character draws in every style, in every state, with finite geometry', () => {
   const ctx = mockCtx();
-  const env = { t: 1.2, px: 0.004, size: [320, 200] as [number, number], canvas: () => mockCtx() };
+  const env = { t: 1.2, px: 0.004, size: [320, 200] as [number, number], canvas: () => mockCtx(), squash: [1, 1] as [number, number], roll: 0 };
   for (let ch = 0; ch < 5; ch++)
     for (const style of ['flat', 'ink', 'pixel', 'paper', 'riso'] as const) {
       const a = new Avatar(doodle, { ...doodle.roster()[0], character: ch, style }, () => {}, 1);
@@ -129,6 +130,36 @@ test('polydots build closed, finite triangle meshes for every preset and state',
       const m = a.build().mesh!;
       assert.ok(m && m.count > 300 && m.count % 3 === 0, `${cfg.name}/${state}: ${m?.count} vertices`);
       for (let i = 0; i < m.count * VERT_FLOATS; i++) assert.ok(Number.isFinite(m.data[i]), `${cfg.name}/${state}: NaN vertex data`);
+    }
+  }
+});
+
+test('a quick click (press then boop) springs back to full height instead of staying squashed', () => {
+  for (const f of FAMILY_LIST) {
+    const a = new Avatar(f, f.roster()[0], () => {}, 5);
+    let t = 0;
+    const ctx = () => ({ t, pointer: [0, 1, 1] as [number, number, number], pointerIdle: 0, camera: [0, 1, 6] as [number, number, number], neighbors: [a], reducedMotion: false });
+    const step = (n: number) => { for (let i = 0; i < n; i++) { t += 1 / 60; a.update(1 / 60, ctx()); } };
+    step(30);
+    const rest = a.build().squash[1];
+    a.pressStart(t);
+    step(6);   // 0.1 s: a click, not a hold
+    a.boop([0, 0.5, 0.3], t);
+    step(240); // 4 s later
+    const after = a.build().squash[1];
+    assert.ok(Math.abs(after - rest) < 0.03, `${f.id}: height ${after.toFixed(3)} vs rest ${rest.toFixed(3)} after a click`);
+  }
+});
+
+test('clawd draws every state and accessory without errors', () => {
+  const ctx = mockCtx();
+  const env = { t: 2.3, px: 0.004, size: [320, 200] as [number, number], canvas: () => mockCtx(), squash: [1.1, 0.8] as [number, number], roll: 0 };
+  for (let acc = 0; acc < 5; acc++) {
+    const a = new Avatar(clawd, { ...clawd.roster()[0], accessory: acc }, () => {}, 1);
+    for (const state of Object.keys(clawd.states)) {
+      a.setState(state, 0);
+      for (let i = 0; i < 3; i++) a.update(1 / 30, { t: i / 30, pointer: [0.4, 1, 1], pointerIdle: 0, camera: [0, 1, 6], neighbors: [a], reducedMotion: false });
+      clawd.draw2d!(ctx, a.config, a.pose, a.face, env);
     }
   }
 });

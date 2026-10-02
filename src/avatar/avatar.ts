@@ -255,6 +255,8 @@ export class Avatar<C extends BaseConfig = BaseConfig> {
 
   /** A click / tap at `q` (local squash space). */
   boop(q: Vec3, t: number): void {
+    // a boop is a quick press: it must end the hold timer, or the hold squash takes over and sticks
+    this.holdStart = -1;
     this.pose.poke = q;
     this.pokeS.x = 0.055;
     this.pokeS.v = 0;
@@ -327,6 +329,8 @@ export class Avatar<C extends BaseConfig = BaseConfig> {
       muse: { squeeze: 'laugh', dizzy: 'dizzy', pet: 'blissful', excited: 'excited' },
       rebel: { squeeze: 'laugh', dizzy: 'dizzy', pet: 'happy', excited: 'wow' },
       poly: { squeeze: 'squeeze', dizzy: 'dizzy', pet: 'happy', excited: 'excited' },
+      doodle: { squeeze: 'squeeze', dizzy: 'dizzy', pet: 'happy', excited: 'excited' },
+      clawd: { squeeze: 'happy', dizzy: 'dizzy', pet: 'happy', excited: 'excited' },
     };
     return map[this.family.id]?.[kind] ?? 'happy';
   }

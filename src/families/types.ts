@@ -75,6 +75,9 @@ export interface Draw2DEnv {
   size: [number, number];
   /** offscreen 2D context of the given size (cached by id), transform reset and cleared */
   canvas: (id: string, w: number, h: number) => CanvasRenderingContext2D;
+  /** squash & stretch and tilt (already applied to ctx unless the family sets pixelMotion) */
+  squash: [number, number];
+  roll: number;
 }
 
 export interface Personality {
@@ -101,6 +104,8 @@ export interface FamilyDef<C extends BaseConfig = BaseConfig> {
   raster?: boolean;
   /** 2D families: draw the character with Canvas2D (ctx is in character units, +y up, origin at the feet) */
   draw2d?(ctx: CanvasRenderingContext2D, c: C, pose: Pose, face: FaceState, env: Draw2DEnv): void;
+  /** 2D pixel-art families: skip the smooth squash/tilt, the family snaps motion to its pixel grid */
+  pixelMotion?: boolean;
   anchors: number;
   look: Look;
   background: string;

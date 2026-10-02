@@ -6,6 +6,7 @@ import { muse } from '../families/muse';
 import { rebel } from '../families/rebel';
 import { poly } from '../families/poly';
 import { doodle } from '../families/doodle';
+import { clawd } from '../families/clawd';
 import type { BaseConfig, FamilyDef } from '../families/types';
 import { icons } from '../ui/icons';
 import { Inspector } from '../ui/inspector';
@@ -20,10 +21,10 @@ type Route = 'home' | FamilyId;
 declare const __SANDBOXED__: boolean;
 type AnyFamily = FamilyDef<any>;
 
-export const FAMILIES: Record<FamilyId, AnyFamily> = { dots, grok, muse, rebel, poly, doodle };
-const ORDER: FamilyId[] = ['dots', 'grok', 'muse', 'rebel', 'poly', 'doodle'];
+export const FAMILIES: Record<FamilyId, AnyFamily> = { dots, grok, muse, rebel, poly, doodle, clawd };
+const ORDER: FamilyId[] = ['dots', 'grok', 'muse', 'rebel', 'poly', 'doodle', 'clawd'];
 /** each view shows one character: the family's lead on the overview, and the studio opens on it too */
-const LEAD: Record<FamilyId, number> = { dots: 4, grok: 0, muse: 6, rebel: 0, poly: 0, doodle: 0 };
+const LEAD: Record<FamilyId, number> = { dots: 4, grok: 0, muse: 6, rebel: 0, poly: 0, doodle: 0, clawd: 0 };
 
 /** Scripted task runs that showcase each family's motion-based state language. */
 const DEMO: Record<FamilyId, Array<[string, number]>> = {
@@ -34,6 +35,7 @@ const DEMO: Record<FamilyId, Array<[string, number]>> = {
   rebel: [['planning', 2.4], ['creating', 3.2], ['optimizing', 2.8], ['publishing', 2.8], ['growing', 2.6], ['idle', 0]],
   poly: [['listening', 1.8], ['thinking', 2.4], ['working', 3.0], ['awaiting', 2.4], ['complete', 2.6], ['idle', 0]],
   doodle: [['listening', 1.8], ['thinking', 2.4], ['working', 3.0], ['speaking', 2.4], ['happy', 2.6], ['idle', 0]],
+  clawd: [['listening', 2.2], ['thinking', 2.6], ['working', 4.0], ['awaiting', 2.6], ['done', 2.6], ['idle', 0]],
 };
 
 const STORE = 'cute-agents:v1:';
@@ -146,6 +148,7 @@ export class App {
           <button class="tab" role="tab" data-route="rebel">Rebels<small>RebelMouse</small></button>
           <button class="tab" role="tab" data-route="poly"><span class="long">Polydots</span><span class="short">Poly</span><small>mash-up</small></button>
           <button class="tab" role="tab" data-route="doodle"><span class="long">Doodles</span><span class="short">2D</span><small>2D</small></button>
+          <button class="tab" role="tab" data-route="clawd">Clawd<small>Claude Code</small></button>
         </nav>
         <div class="top-actions">
           <div class="menu" id="settings">
@@ -281,7 +284,7 @@ export class App {
       <section class="overview">
         <div class="hero">
           <h1>Why AI agents are getting cute</h1>
-          <p>OpenAI Dots, Grok Bot, Meta Muse and the RebelMouse crew, rebuilt as live 3D characters, plus a low-poly Dots × RebelMouse mash-up and five 2D doodles. Move your cursor and they'll watch you. Click to boop, hold to squish, drag to pet.</p>
+          <p>OpenAI Dots, Grok Bot, Meta Muse and the RebelMouse crew, rebuilt as live 3D characters, plus a low-poly Dots × RebelMouse mash-up, five 2D doodles and Claude Code’s terminal crab. Move your cursor and they'll watch you. Click to boop, hold to squish, drag to pet.</p>
         </div>
         <div class="cards">
           ${ORDER.map((id) => {

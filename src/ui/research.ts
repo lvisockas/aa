@@ -67,6 +67,12 @@ export const researchHTML = `
   <b>risograph</b> (two inks overprinted, halftone, misregistration). Any character can wear any style, and they
   share the 3D families' brain: gaze, blinks, boops, states.</p>
 
+  <h3>Clawd · Claude Code's terminal crab</h3>
+  <p>The 8-bit crab Claude Code greets you with, rebuilt from its quadrant-block artwork at its true resolution:
+  a 16-column body, tall slit eyes, arm nubs and four legs in terracotta. Everything moves in whole pixels, the
+  way pixel art animates. The eyes step towards your cursor, the legs scuttle, the arms type, and squash drops
+  whole rows. A terminal status line runs a sparkle spinner with a playful verb while it works.</p>
+
   <h3>Why this renderer (and not three.js by default)</h3>
   <table>
     <tr><th>Option</th><th>Fit for these characters</th></tr>
@@ -105,6 +111,7 @@ export const researchHTML = `
     <li><a href="https://the-gadgeteer.com/2026/09/24/meta-muse-charm-ai-assistant-keychain/" target="_blank" rel="noopener">The Gadgeteer: Muse Charm keychain</a></li>
     <li><a href="https://runtimewire.com/article/meta-muse-realtime-avatar" target="_blank" rel="noopener">Runtime Wire: Muse Realtime Avatar</a></li>
     <li><a href="https://designcompass.org/en/2026/09/30/why-ai-agents-are-getting-cute/" target="_blank" rel="noopener">Design Compass: Why AI agents are getting cute</a></li>
+    <li><a href="https://tympanus.net/codrops/2026/05/05/reverse-engineering-claude-ais-mascot-animations-with-svg-and-gsap/" target="_blank" rel="noopener">Codrops: reverse-engineering Claude's mascot animations</a></li>
     <li><a href="https://www.rebelmouse.com/creative-agency" target="_blank" rel="noopener">RebelMouse: creative agency (the mascot)</a></li>
     <li><a href="https://www.rebelmouse.com/2026-platform-updates" target="_blank" rel="noopener">RebelMouse: 2026 platform updates (agentic CMS)</a></li>
     <li><a href="https://www.americanexpress.com/us/small-business/openforum/articles/a-huffpo-veteran-creates-a-new-content-management-site/" target="_blank" rel="noopener">OPEN Forum: a HuffPo veteran creates RebelMouse</a></li>

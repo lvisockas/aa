@@ -127,6 +127,19 @@ if (family === 'dots') {
   await page.click('.ctl[data-key="shape"] button[data-v="5"]');
   const sh = await page.evaluate(() => { const s = window.__app.liveStages[0]; return s.avatars[s.selected].config.shape; });
   check('silhouette picker morphs the bot', sh === 5, `shape=${sh}`);
+} else if (family === 'clawd') {
+  await page.click('.ctl[data-key="accessory"] button[data-v="3"]');
+  await page.click('.ctl[data-key="state"] button[data-v="working"]');
+  await settle(3);
+  const d = await page.evaluate(() => {
+    const s = window.__app.liveStages[0];
+    const c = s.avatars[s.selected].config;
+    const px = s.canvas2d.getContext('2d').getImageData(0, 0, s.canvas2d.width, s.canvas2d.height).data;
+    let inked = 0;
+    for (let i = 3; i < px.length; i += 4 * 97) if (px[i] > 40) inked++;
+    return { accessory: c.accessory, state: c.state, inked };
+  });
+  check('accessory and state chips redraw the terminal crab', d.accessory === 3 && d.state === 'working' && d.inked > 20, JSON.stringify(d));
 } else if (family === 'doodle') {
   await page.click('.ctl[data-key="style"] button[data-v="riso"]');
   await page.click('.ctl[data-key="character"] button[data-v="4"]');
