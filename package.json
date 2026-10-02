@@ -11,7 +11,8 @@
     "test": "node scripts/test.mjs",
     "shots": "node scripts/shots.mjs",
     "interact": "node scripts/interact.mjs",
-    "debug": "node scripts/build.mjs --debug"
+    "debug": "node scripts/build.mjs --debug",
+    "build:artifact": "node scripts/build.mjs --artifact"
   },
   "devDependencies": {
     "esbuild": "0.28.2",

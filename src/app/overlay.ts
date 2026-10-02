@@ -101,7 +101,7 @@ export class Overlay {
     const ctx = this.ctx;
     ctx.save();
     ctx.globalAlpha = t.alpha;
-    ctx.font = '600 12px Inter, system-ui, sans-serif';
+    ctx.font = '700 12px "Nunito Sans", system-ui, sans-serif';
     const w = ctx.measureText(t.text).width + 18;
     const h = 24;
     const x = t.x - w / 2, y = t.y - h - 8;
@@ -158,7 +158,7 @@ export class Overlay {
       case 'question':
       case 'note':
       case 'check': {
-        ctx.font = `800 ${s * 1.3}px Inter, system-ui, sans-serif`;
+        ctx.font = `800 ${s * 1.3}px "Nunito Sans", system-ui, sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         const ch = e.kind === 'bang' ? '!' : e.kind === 'question' ? '?' : e.kind === 'note' ? '♪' : '✓';
@@ -169,7 +169,7 @@ export class Overlay {
         break;
       }
       case 'zzz': {
-        ctx.font = `700 ${s}px Inter, system-ui, sans-serif`;
+        ctx.font = `700 ${s}px "Nunito Sans", system-ui, sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText('z', Math.sin(age * 3) * 4, 0);

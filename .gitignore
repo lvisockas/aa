@@ -3,3 +3,4 @@ node_modules/
 shots/
 *.log
 dist/debug.html
+dist/artifact.html

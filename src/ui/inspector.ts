@@ -96,14 +96,14 @@ export class Inspector {
         return wrap(
           `<div class="swatches" role="group" aria-label="${esc(ctl.label)}">${ctl.colors
             .map((col) => `<button aria-pressed="${col.toLowerCase() === String(v).toLowerCase()}" data-v="${col}" style="background:${col}" aria-label="${col}"></button>`)
-            .join('')}${ctl.custom ? `<label class="custom" title="Custom colour"><input type="color" value="${esc(String(v))}" aria-label="Custom colour"></label>` : ''}</div>`,
+            .join('')}${ctl.custom ? `<label class="custom" title="Custom colour"><input type="color" id="${id}-custom" value="${esc(String(v))}" aria-label="Custom colour"></label>` : ''}</div>`,
         );
       case 'slider': {
         const p = ((Number(v) - ctl.min) / (ctl.max - ctl.min)) * 100;
         return wrap(`<input type="range" id="${id}" min="${ctl.min}" max="${ctl.max}" step="${ctl.step}" value="${v}" style="--p:${p}%" aria-label="${esc(ctl.label)}">`);
       }
       case 'toggle':
-        return wrap(`<label class="switch"><span>${esc(ctl.label)}</span><input type="checkbox" ${v ? 'checked' : ''}></label>`, false);
+        return wrap(`<label class="switch" for="${id}"><span>${esc(ctl.label)}</span><input type="checkbox" id="${id}" ${v ? 'checked' : ''}></label>`, false);
     }
   }
 

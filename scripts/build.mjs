@@ -8,6 +8,7 @@ import path from 'node:path';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const serve = process.argv.includes('--serve');
+const artifact = process.argv.includes('--artifact');
 const outDir = path.join(root, 'dist');
 
 /** Strip comments and indentation from GLSL while keeping line structure for #directives. */
@@ -37,12 +38,18 @@ const inlinePlugin = {
       if (result.errors.length) return;
       const js = result.outputFiles.find((f) => f.path.endsWith('.js'));
       const css = result.outputFiles.find((f) => f.path.endsWith('.css'));
-      const template = await readFile(path.join(root, 'src/index.html'), 'utf8');
+      let template = await readFile(path.join(root, 'src/index.html'), 'utf8');
+      if (artifact) {
+        // hosted viewers wrap the page in their own document skeleton
+        const head = template.match(/<head>([\s\S]*?)<\/head>/)[1].replace(/<meta[^>]*>\s*/g, '');
+        const body = template.match(/<body>([\s\S]*?)<\/body>/)[1];
+        template = `${head.trim()}\n${body.trim()}\n`;
+      }
       const html = template
         .replace('<!--STYLE-->', () => `<style>${css ? css.text : ''}</style>`)
         .replace('<!--SCRIPT-->', () => `<script>${js.text.replace(/<\/script/gi, '<\\/script')}</script>`);
       await mkdir(outDir, { recursive: true });
-      const name = debug ? 'debug.html' : 'index.html';
+      const name = debug ? 'debug.html' : artifact ? 'artifact.html' : 'index.html';
       await writeFile(path.join(outDir, name), html);
       const kb = (Buffer.byteLength(html) / 1024).toFixed(1);
       console.log(`[build] dist/${name} ${kb} KB`);
@@ -62,6 +69,7 @@ const options = {
   write: false,
   legalComments: 'none',
   logLevel: 'info',
+  define: { __SANDBOXED__: artifact ? 'true' : 'false' },
   plugins: [glslPlugin, inlinePlugin],
 };
 

@@ -10,7 +10,7 @@ const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--ena
 const page = await browser.newPage({ viewport: { width: 900, height: 600 } });
 const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));
-await page.goto(pathToFileURL(path.join(root, 'dist/index.html')).href + `?q=low#/${family}`);
+await page.goto(pathToFileURL(path.join(root, 'dist/index.html')).href + `?q=low#${family}`);
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const frames = () => page.evaluate(() => window.__frames || 0);
 for (let i = 0; i < 240 && (await frames()) < 3; i++) await wait(250);

@@ -38,12 +38,13 @@ npm run build      # minified single-file dist/index.html
 npm run typecheck  # tsc --noEmit
 npm test           # unit tests (dynamics, framing, family contracts)
 npm run interact   # headless pointer/click smoke test (needs Playwright's Chromium)
-npm run shots -- "t=1#/muse" shots/muse.png 1440 900   # headless screenshot
+npm run shots -- "t=1#muse" shots/muse.png 1440 900   # headless screenshot
 npm run debug      # dist/debug.html: one family, no UI (debug.html?family=dots&only=0,3&q=high)
+npm run build:artifact  # dist/artifact.html for sandboxed hosts (no document skeleton, no downloads)
 ```
 
-URL parameters: `#/dots`, `#/grok`, `#/muse` (routes), `?q=low|medium|high|ultra` (quality),
-`?t=1.5` (freeze time, deterministic renders), `?stop=N` (stop after N frames).
+Routes: `#dots`, `#grok`, `#muse` (overview otherwise). URL parameters: `?q=low|medium|high|ultra`
+(quality), `?t=1.5` (freeze time, deterministic renders), `?stop=N` (stop after N frames).
 
 ### Layout
 

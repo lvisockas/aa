@@ -9,8 +9,12 @@ import { Inspector } from '../ui/inspector';
 import { researchHTML } from '../ui/research';
 import { Overlay, type Tag } from './overlay';
 import { Stage } from './stage';
+import { downloadStagePNG } from './snapshot';
 
 type Route = 'home' | FamilyId;
+
+/** Built for a sandboxed viewer (downloads are blocked there); a compile-time define from scripts/build.mjs. */
+declare const __SANDBOXED__: boolean;
 type AnyFamily = FamilyDef<any>;
 
 export const FAMILIES: Record<FamilyId, AnyFamily> = { dots, grok, muse };
@@ -116,7 +120,7 @@ export class App {
       <canvas id="gl" aria-hidden="true"></canvas>
       <canvas id="fx" aria-hidden="true"></canvas>
       <header class="top">
-        <a class="brand" href="#/">${icons.spark}<span>Cute Agents</span></a>
+        <a class="brand" href="#all">${icons.spark}<span>Cute Agents</span></a>
         <nav class="tabs" role="tablist" aria-label="Families">
           <button class="tab" role="tab" data-route="home"><span class="long">Overview</span><span class="short">All</span></button>
           <button class="tab" role="tab" data-route="dots">Dots<small>OpenAI</small></button>
@@ -132,7 +136,7 @@ export class App {
                   .map((q) => `<button data-q="${q}" aria-pressed="${q === this.quality}">${q[0].toUpperCase() + q.slice(1)}</button>`)
                   .join('')}</div>
               </div>
-              <div class="row"><label class="switch"><span>Reduced motion</span><input type="checkbox" id="rm" ${this.reducedMotion ? 'checked' : ''}></label></div>
+              <div class="row"><label class="switch" for="rm"><span>Reduced motion</span><input type="checkbox" id="rm" ${this.reducedMotion ? 'checked' : ''}></label></div>
               <div class="stat" id="stat">—</div>
             </div>
           </div>
@@ -152,7 +156,7 @@ export class App {
     const root = this.root;
     root.querySelectorAll<HTMLButtonElement>('.tab').forEach((b) =>
       b.addEventListener('click', () => {
-        location.hash = b.dataset.route === 'home' ? '#/' : `#/${b.dataset.route}`;
+        location.hash = b.dataset.route === 'home' ? '#all' : `#${b.dataset.route}`;
       }),
     );
     const menu = root.querySelector<HTMLElement>('#settings')!;
@@ -216,7 +220,8 @@ export class App {
     clearTimeout(this.demoTimer);
     const forced = new URLSearchParams(location.search).get('theme');
     const dark = forced ? forced === 'dark' : route === 'home' || FAMILIES[route].dark;
-    document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+    // the family's own look (the host may own data-theme, so we use data-look)
+    document.documentElement.dataset.look = dark ? 'dark' : 'light';
     this.root.querySelectorAll<HTMLElement>('.tab').forEach((t) => t.setAttribute('aria-selected', String(t.dataset.route === route)));
     this.stages = [];
     this.studio = null;
@@ -267,7 +272,7 @@ export class App {
         <p class="foot-note">Rendered live by a custom signed-distance-field ray marcher on WebGL2. No three.js, no meshes, no downloaded assets.</p>
       </section>`;
     this.main.querySelectorAll<HTMLButtonElement>('[data-open]').forEach((b) =>
-      b.addEventListener('click', () => (location.hash = `#/${b.dataset.open}`)),
+      b.addEventListener('click', () => (location.hash = `#${b.dataset.open}`)),
     );
     ORDER.forEach((id, slot) => {
       const el = this.main.querySelector<HTMLElement>(`.stage[data-family="${id}"]`)!;
@@ -298,7 +303,7 @@ export class App {
               </div>
               <div class="stage-tools">
                 <button class="icon-btn" data-tool="solo" title="Focus on the selected avatar">${icons.solo}<span>Solo</span></button>
-                <button class="icon-btn" data-tool="shot" title="Download a PNG snapshot" aria-label="Snapshot">${icons.camera}</button>
+                ${__SANDBOXED__ ? '' : `<button class="icon-btn" data-tool="shot" title="Download a PNG snapshot" aria-label="Snapshot">${icons.camera}</button>`}
               </div>
             </div>
             <div class="stage-bottom">
@@ -355,7 +360,7 @@ export class App {
       }),
     );
     el.querySelector('[data-tool="demo"]')!.addEventListener('click', () => this.runDemo());
-    el.querySelector('[data-tool="shot"]')!.addEventListener('click', () => this.snapshot());
+    el.querySelector('[data-tool="shot"]')?.addEventListener('click', () => this.snapshot());
     const soloBtn = el.querySelector<HTMLButtonElement>('[data-tool="solo"]')!;
     soloBtn.addEventListener('click', () => {
       stage.mode = stage.mode === 'solo' ? 'group' : 'solo';
@@ -488,28 +493,12 @@ export class App {
     const s = this.studio;
     const view = s?.getView();
     if (!s || !view) return;
-    this.renderer.render([view]);
-    const gl = this.renderer.canvas;
-    const sx = gl.width / window.innerWidth;
-    const sy = gl.height / window.innerHeight;
-    const r = view.rect;
-    const out = document.createElement('canvas');
-    out.width = Math.round(r.width * sx);
-    out.height = Math.round(r.height * sy);
-    const ctx = out.getContext('2d')!;
-    ctx.fillStyle = s.family.background;
-    ctx.fillRect(0, 0, out.width, out.height);
-    ctx.drawImage(gl, r.left * sx, r.top * sy, r.width * sx, r.height * sy, 0, 0, out.width, out.height);
-    out.toBlob((b) => {
-      if (!b) return;
-      const url = URL.createObjectURL(b);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${s.family.id}-${String(this.current?.config.name ?? 'avatar').toLowerCase().replace(/\W+/g, '-')}.png`;
-      link.click();
-      setTimeout(() => URL.revokeObjectURL(url), 2000);
-    }, 'image/png');
-    this.toast('Snapshot saved');
+    // hosted viewers block downloads: the button is not rendered there and this branch is compiled out
+    if (!__SANDBOXED__) {
+      const name = String(this.current?.config.name ?? 'avatar').toLowerCase().replace(/\W+/g, '-');
+      downloadStagePNG(this.renderer, view, s.family.background, `${s.family.id}-${name}.png`);
+      this.toast('Snapshot saved');
+    }
   }
 
   private onKey(e: KeyboardEvent): void {
