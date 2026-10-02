@@ -2,7 +2,8 @@ import { QUALITY, Renderer, type FamilyId, type QualityName } from '../engine/re
 import { clamp } from '../engine/math';
 import { dots } from '../families/dots';
 import { grok } from '../families/grok';
-import { applySpecies, muse } from '../families/muse';
+import { muse } from '../families/muse';
+import { rebel } from '../families/rebel';
 import type { BaseConfig, FamilyDef } from '../families/types';
 import { icons } from '../ui/icons';
 import { Inspector } from '../ui/inspector';
@@ -17,15 +18,17 @@ type Route = 'home' | FamilyId;
 declare const __SANDBOXED__: boolean;
 type AnyFamily = FamilyDef<any>;
 
-export const FAMILIES: Record<FamilyId, AnyFamily> = { dots, grok, muse };
-const ORDER: FamilyId[] = ['dots', 'grok', 'muse'];
-const OVERVIEW_PICK: Record<FamilyId, number[]> = { dots: [0, 1, 2, 3], grok: [0, 1, 2, 3, 4, 5, 6, 7, 8], muse: [0, 2, 4, 6] };
+export const FAMILIES: Record<FamilyId, AnyFamily> = { dots, grok, muse, rebel };
+const ORDER: FamilyId[] = ['dots', 'grok', 'muse', 'rebel'];
+const OVERVIEW_PICK: Record<FamilyId, number[]> = { dots: [0, 1, 2, 3], grok: [0, 1, 2, 3, 4, 5, 6, 7, 8], muse: [0, 2, 4, 6], rebel: [0, 1, 2, 3] };
 
 /** Scripted task runs that showcase each family's motion-based state language. */
 const DEMO: Record<FamilyId, Array<[string, number]>> = {
   dots: [['listening', 1.8], ['thinking', 2.4], ['working', 3.2], ['awaiting', 2.6], ['complete', 2.6], ['idle', 0]],
   grok: [['thinking', 2.2], ['working', 3.0], ['orbit', 3.2], ['waiting', 2.2], ['done', 2.6], ['idle', 0]],
   muse: [['listening', 1.8], ['thinking', 2.4], ['working', 3.4], ['speaking', 2.8], ['celebrating', 2.6], ['idle', 0]],
+  // RebelMouse's agentic CMS pitch: it plans, creates, optimizes and grows
+  rebel: [['planning', 2.4], ['creating', 3.2], ['optimizing', 2.8], ['publishing', 2.8], ['growing', 2.6], ['idle', 0]],
 };
 
 const STORE = 'cute-agents:v1:';
@@ -124,8 +127,9 @@ export class App {
         <nav class="tabs" role="tablist" aria-label="Families">
           <button class="tab" role="tab" data-route="home"><span class="long">Overview</span><span class="short">All</span></button>
           <button class="tab" role="tab" data-route="dots">Dots<small>OpenAI</small></button>
-          <button class="tab" role="tab" data-route="grok">Grok Bot<small>xAI</small></button>
+          <button class="tab" role="tab" data-route="grok"><span class="long">Grok Bot</span><span class="short">Grok</span><small>xAI</small></button>
           <button class="tab" role="tab" data-route="muse">Muse<small>Meta</small></button>
+          <button class="tab" role="tab" data-route="rebel">Rebels<small>RebelMouse</small></button>
         </nav>
         <div class="top-actions">
           <div class="menu" id="settings">
@@ -223,6 +227,14 @@ export class App {
     // the family's own look (the host may own data-theme, so we use data-look)
     document.documentElement.dataset.look = dark ? 'dark' : 'light';
     this.root.querySelectorAll<HTMLElement>('.tab').forEach((t) => t.setAttribute('aria-selected', String(t.dataset.route === route)));
+    // on narrow screens the tab bar scrolls: keep the active tab in view
+    const sel = this.root.querySelector<HTMLElement>(`.tab[data-route="${route}"]`);
+    const bar = sel?.parentElement;
+    if (sel && bar && bar.scrollWidth > bar.clientWidth) {
+      const r = sel.getBoundingClientRect(), b = bar.getBoundingClientRect();
+      if (r.left < b.left) bar.scrollLeft -= b.left - r.left + 6;
+      else if (r.right > b.right) bar.scrollLeft += r.right - b.right + 6;
+    }
     this.stages = [];
     this.studio = null;
     this.inspector = null;
@@ -253,7 +265,7 @@ export class App {
       <section class="overview">
         <div class="hero">
           <h1>Why AI agents are getting cute</h1>
-          <p>OpenAI Dots, Grok Bot and Meta Muse, rebuilt as live 3D characters. Move your cursor and they'll watch you. Click to boop, hold to squish, drag to pet.</p>
+          <p>OpenAI Dots, Grok Bot, Meta Muse and the RebelMouse crew, rebuilt as live 3D characters. Move your cursor and they'll watch you. Click to boop, hold to squish, drag to pet.</p>
         </div>
         <div class="cards">
           ${ORDER.map((id) => {
@@ -406,11 +418,13 @@ export class App {
       c._from = this.snapshotShape(c);
       c.shape = value;
       a.markMorph();
-    } else if (key === 'species' && this.studio.family.id === 'muse') {
-      a.config = applySpecies(a.config as never, Number(value)) as never;
-      this.inspector?.show(this.studio.family, this.studio.avatars, this.studio.selected);
     } else {
-      c[key] = value;
+      const implied = this.studio.family.onChange?.(a.config, key, value);
+      if (implied) {
+        // the change implies others (species presets): adopt them and refresh the panel
+        a.config = implied as never;
+        this.inspector?.show(this.studio.family, this.studio.avatars, this.studio.selected);
+      } else c[key] = value;
     }
     if (key === 'expression' || key === 'eyes' || key === 'eyeTilt') a.refreshFace();
     this.save();
@@ -496,7 +510,7 @@ export class App {
     // hosted viewers block downloads: the button is not rendered there and this branch is compiled out
     if (!__SANDBOXED__) {
       const name = String(this.current?.config.name ?? 'avatar').toLowerCase().replace(/\W+/g, '-');
-      downloadStagePNG(this.renderer, view, s.family.background, `${s.family.id}-${name}.png`);
+      downloadStagePNG(this.renderer, view, s.family.backgroundSolid ?? s.family.background, `${s.family.id}-${name}.png`);
       this.toast('Snapshot saved');
     }
   }

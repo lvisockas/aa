@@ -1,13 +1,13 @@
 # Cute Agents
 
-Interactive, cursor-reactive 3D avatars inspired by the three agent mascots of autumn 2026:
-**OpenAI Dots**, **xAI Grok Bot** and **Meta Muse ("Jolly")**. Every character is rendered live by a custom
-signed-distance-field ray marcher on WebGL2, with no three.js, no meshes and no downloaded assets, and
-every character is fully customisable.
+Interactive, cursor-reactive 3D avatars inspired by the three agent mascots of autumn 2026,
+**OpenAI Dots**, **xAI Grok Bot** and **Meta Muse ("Jolly")**, plus a fourth family built around the
+**RebelMouse** mascot. Every character is rendered live by a custom signed-distance-field ray marcher on
+WebGL2, with no three.js, no meshes and no downloaded assets, and every character is fully customisable.
 
-| Dots (OpenAI) | Grok Bot (xAI) | Muse (Meta) |
-|---|---|---|
-| Plush fleece blobs with bead, diamond and googly eyes, berets, glasses, bow ties, headphones | Inflated geometric shapes with vector slit eyes, 16 expressions, shapes that morph like jelly | Articulated plush "Jolly" cast with longer fur, outfits, hats and held items |
+| Dots (OpenAI) | Grok Bot (xAI) | Muse (Meta) | Rebels (RebelMouse) |
+|---|---|---|---|
+| Plush fleece blobs with bead, diamond and googly eyes, berets, glasses, bow ties, headphones | Inflated geometric shapes with vector slit eyes, 16 expressions, shapes that morph like jelly | Articulated plush "Jolly" cast with longer fur, outfits, hats and held items | The bandana-wearing mouse plus a panda, raccoon and fox: swishing tails, flags and megaphones, in vinyl, plush or flat-logo finishes |
 
 **Open `dist/index.html` in any modern browser.** It's a single self-contained file.
 
@@ -17,16 +17,16 @@ every character is fully customisable.
 * **Click** to boop: the surface dents exactly where you clicked (GPU picking), then the character squashes, hops and shows an emote. Five quick boops make it dizzy.
 * **Hold** to squish, then release for a big jump. **Drag across** a character to pet it. **Double-click** for a spin.
 * **Agent states**: switch states from the bar (idle, thinking, working, waiting, blocked, done, plus each family's own), or press **Run a task** to watch motion-based state expression end to end.
-* **Customise everything** in the inspector: shape (with live morphing), colour, material, fur length and fluffiness, eyes and expression, mouth, blush, hats, glasses, outfits, held items. Randomise, reset, copy as JSON, or save a PNG snapshot. Edits persist in your browser.
+* **Customise everything** in the inspector: shape (with live morphing), colour, material, fur length and fluffiness, eyes and expression, mouth, blush, hats, glasses, outfits, bandanas, held items, even the species. Randomise, reset, copy as JSON, or save a PNG snapshot. Edits persist in your browser.
 * Render settings (gear menu): Auto / Low / Medium / High / Ultra quality, and reduced motion.
 
 ## Why not three.js?
 
 Short version: these characters *are* soft primitives blended together, which is a distance field.
 Ray marching that field directly gives continuous shape morphing, poke dents, squash and stretch, soft
-shadows, ambient occlusion and volumetric fur almost for free, in one ~176 KB file. A mesh engine would
+shadows, ambient occlusion and volumetric fur almost for free, in one ~215 KB file. A mesh engine would
 need remeshing or morph targets, shadow maps, SSAO and shell geometry to get the same look.
-**See [docs/RESEARCH.md](docs/RESEARCH.md)** for the product research (all three systems) and the full
+**See [docs/RESEARCH.md](docs/RESEARCH.md)** for the product research (all four families) and the full
 comparison: three.js, Babylon, PlayCanvas, Rive, pre-rendered and neural video, Gaussian splats, WebGPU.
 
 ## Development
@@ -39,11 +39,11 @@ npm run typecheck  # tsc --noEmit
 npm test           # unit tests (dynamics, framing, family contracts)
 npm run interact   # headless pointer/click smoke test (needs Playwright's Chromium)
 npm run shots -- "t=1#muse" shots/muse.png 1440 900   # headless screenshot
-npm run debug      # dist/debug.html: one family, no UI (debug.html?family=dots&only=0,3&q=high)
+npm run debug      # dist/debug.html: one family, no UI (debug.html?family=dots&only=0,3&q=high&warm=120)
 npm run build:artifact  # dist/artifact.html for sandboxed hosts (no document skeleton, no downloads)
 ```
 
-Routes: `#dots`, `#grok`, `#muse` (overview otherwise). URL parameters: `?q=low|medium|high|ultra`
+Routes: `#dots`, `#grok`, `#muse`, `#rebel` (overview otherwise). URL parameters: `?q=low|medium|high|ultra`
 (quality), `?t=1.5` (freeze time, deterministic renders), `?stop=N` (stop after N frames).
 
 ### Layout
@@ -52,8 +52,8 @@ Routes: `#dots`, `#grok`, `#muse` (overview otherwise). URL parameters: `?q=low|
 src/
   engine/      renderer (multi-view WebGL2), program compile, noise and strand textures, springs, math
   shaders/     common_head.glsl (SDF library, materials) · common_main.glsl (march, fur, shading)
-               dots.glsl · grok.glsl · muse.glsl (one distance field + materials per family)
-  families/    presets, settings schema, expressions, states, parameter packing, compositions
+               dots.glsl · grok.glsl · muse.glsl · rebel.glsl (one distance field + materials per family)
+  families/    presets, settings schema, expressions, states, parameter packing, compositions, arm rig
   avatar/      per-character brain: gaze, blinks, expression swaps, squash/hop, reactions, states
   app/         stages (DOM-hosted views, picking, framing), overlay emotes, app shell
   ui/          inspector (generated from schema), icons, research drawer, styles
@@ -64,9 +64,11 @@ docs/          RESEARCH.md
 
 To add a family: write `<name>.glsl` (implement `loadChar`, `mapHard`, `mapBase`, `furLen`, `furAt`,
 `surfAt`), add a `FamilyDef` with presets, schema, states and `pack()`, and register it in `app/app.ts`.
+Optional hooks: `onChange` applies presets when a key changes (species palettes) and `armPose` swaps a
+state's arm pose (the Rebels aim a megaphone instead of raising it).
 
 ## Credits
 
-Characters are fan interpretations for research and design exploration. Dots, Grok Bot, Muse and Jolly
-belong to their respective owners. Rendering techniques draw on work by Inigo Quilez, Khronos (PBR Neutral),
+Characters are fan interpretations for research and design exploration. Dots, Grok Bot, Muse, Jolly and
+the RebelMouse mascot belong to their respective owners. Rendering techniques draw on work by Inigo Quilez, Khronos (PBR Neutral),
 Estevez & Kulla (sheen) and t3ssel8r (procedural motion).

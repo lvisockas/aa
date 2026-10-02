@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { Avatar } from '../src/avatar/avatar';
 import { NP } from '../src/engine/renderer';
 import { rng } from '../src/engine/math';
+import { rebel } from '../src/families/rebel';
 import { FAMILY_LIST } from './helpers';
 
 test('every schema control maps to a real config key', () => {
@@ -61,4 +62,18 @@ test('interactions never produce NaNs (boop, hold, pet, trick)', () => {
     for (const v of frame.data) assert.ok(Number.isFinite(v), `${f.id}: NaN after interactions`);
     assert.ok(frame.rot.every(Number.isFinite));
   }
+});
+
+test('species presets and prop-aware arm poses (family hooks)', () => {
+  const panda = rebel.onChange!(rebel.roster()[0], 'species', 1)!;
+  assert.equal(panda.species, 1);
+  assert.equal(panda.bodyColor, '#F6F5F1');
+  assert.equal(panda.name, rebel.roster()[0].name, 'a species switch keeps the rest of the config');
+  const bandit = rebel.roster().find((c) => c.prop === 2)!;
+  assert.equal(rebel.armPose!(bandit, 'rally'), 'aim');
+  assert.equal(rebel.armPose!({ ...bandit, prop: 1 }, 'rally'), 'rally');
+  const a = new Avatar(rebel, { ...bandit }, () => {}, 1);
+  a.setState('publishing', 0);
+  for (let i = 0; i < 180; i++) a.update(1 / 60, { t: i / 60, pointer: null, pointerIdle: 99, camera: [0, 1, 6], neighbors: [a], reducedMotion: false });
+  assert.ok(a.pose.arms.rFwd < 0.1 && a.pose.arms.rRaise > 2, `arms ${JSON.stringify(a.pose.arms)}`);
 });

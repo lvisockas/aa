@@ -49,6 +49,8 @@ export const ARM_POSES: Record<string, ArmPose> = {
   think: { lRaise: 0.2, rRaise: 0.95, lFwd: 0.2, rFwd: 1.2, lBend: 0.2, rBend: 1.9, wave: 0, tap: 0 },
   hold: { lRaise: 0.5, rRaise: 0.55, lFwd: 0.2, rFwd: 0.85, lBend: 0.3, rBend: 1.1, wave: 0, tap: 0 },
   hug: { lRaise: 0.75, rRaise: 0.75, lFwd: 1.1, rFwd: 1.1, lBend: 1.0, rBend: 1.0, wave: 0, tap: 0 },
+  rally: { lRaise: 0.55, rRaise: 2.75, lFwd: 0.25, rFwd: 0.35, lBend: 0.5, rBend: 0.25, wave: 0.15, tap: 0 },
+  aim: { lRaise: 0.55, rRaise: 2.55, lFwd: 0.25, rFwd: -0.2, lBend: 0.5, rBend: 1.15, wave: 0, tap: 0 },
 };
 
 export interface UpdateContext {
@@ -323,6 +325,7 @@ export class Avatar<C extends BaseConfig = BaseConfig> {
       grok: { squeeze: 'laugh', dizzy: 'dizzy', pet: 'happy', excited: 'starstruck' },
       dots: { squeeze: 'squeeze', dizzy: 'dizzy', pet: 'happy', excited: 'excited' },
       muse: { squeeze: 'laugh', dizzy: 'dizzy', pet: 'blissful', excited: 'excited' },
+      rebel: { squeeze: 'laugh', dizzy: 'dizzy', pet: 'happy', excited: 'wow' },
     };
     return map[this.family.id]?.[kind] ?? 'happy';
   }
@@ -525,9 +528,9 @@ export class Avatar<C extends BaseConfig = BaseConfig> {
 
   private armPoseId(): string {
     const S = this.family.states[this.config.state] ?? this.family.states[this.family.defaultState];
-    if (S.arms && S.arms !== 'rest') return S.arms;
-    if (this.pet > 0.3) return 'hug';
-    return (this.config as { held?: number }).held ? 'hold' : 'rest';
+    const c = this.config as { held?: number; prop?: number };
+    const id = S.arms && S.arms !== 'rest' ? S.arms : this.pet > 0.3 ? 'hug' : c.held || c.prop ? 'hold' : 'rest';
+    return this.family.armPose?.(this.config, id) ?? id;
   }
 
   private startBlink(t: number): void {

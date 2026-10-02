@@ -4,7 +4,7 @@ import { createProgram, type Program } from './gl';
 import { lookAt, quatRotate, type Quat, type Vec3 } from './math';
 import { createNoiseTexture, createStrandTexture } from './textures';
 
-export type FamilyId = 'dots' | 'grok' | 'muse';
+export type FamilyId = 'dots' | 'grok' | 'muse' | 'rebel';
 
 /** Characters per view and parameter texels per character (shared by all families). */
 export const MAXC = 10;

@@ -28,7 +28,7 @@ export class Inspector {
     this.family = family;
     this.avatar = avatars[selected];
     const c = this.avatar.config as BaseConfig;
-    const color = (cfg: Record<string, unknown>) => (cfg.color ?? cfg.furColor ?? '#ccc') as string;
+    const color = (cfg: Record<string, unknown>) => (cfg.color ?? cfg.furColor ?? cfg.bodyColor ?? '#ccc') as string;
     this.el.innerHTML = `
       <div class="insp-head">
         <div class="insp-title">
@@ -160,7 +160,7 @@ export class Inspector {
         const pick = (col: string) => {
           wrap.querySelectorAll('button[data-v]').forEach((x) => x.setAttribute('aria-pressed', String((x as HTMLElement).dataset.v!.toLowerCase() === col.toLowerCase())));
           this.h.change(key, col);
-          if (key === 'color' || key === 'furColor') {
+          if (key === 'color' || key === 'furColor' || key === 'bodyColor') {
             const dot = el.querySelector<HTMLElement>('.roster [aria-pressed="true"] i');
             if (dot) dot.style.background = col;
           }

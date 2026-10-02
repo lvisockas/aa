@@ -3,7 +3,8 @@
 Between August and September 2026, three of the largest AI labs gave their agents a face, and all three
 chose *cute*. This document covers what each system looks like and how it behaves, what that implies for
 a faithful, interactive 3D rebuild, and why this project renders them with a custom signed-distance-field
-ray marcher instead of reaching for three.js by default.
+ray marcher instead of reaching for three.js by default. A fourth family, the **Rebels**, extends the
+studio to the RebelMouse mascot and three friends (section 1.5).
 
 > Research method: web search across launch coverage, official posts and design write-ups (Sept–Oct 2026).
 > Direct page fetches were blocked by the build environment's network policy, so facts come from
@@ -11,7 +12,7 @@ ray marcher instead of reaching for three.js by default.
 
 ---
 
-## 1. The three systems
+## 1. The systems
 
 ### 1.1 OpenAI · Dots
 
@@ -63,19 +64,51 @@ was "It's cute. It's cuddly. And it wants your data", and Muse is an 18+ product
 costume. For a rebuild, the takeaway is that **expressiveness per pixel and per frame** matters more than
 realism. All three systems carry state through motion and expression.
 
+### 1.5 RebelMouse · the Rebels (added family)
+
+| | |
+|---|---|
+| **Who** | RebelMouse is a publishing platform founded in 2012 by Paul Berry, the former CTO of The Huffington Post. It began as a "social front page" that aggregated a brand's social feeds and grew into a full CMS for media companies and brands such as Pepsi, Adidas, MTV, Patagonia, Red Bull and Burger King. |
+| **Agents** | Its 2026 pitch is an **agentic CMS**: AI agents work inside the CMS to assist, optimise and repurpose content, with roles, audit logs and review gates on every agent action. It also offers OpenAI-powered assistants for headlines, SEO and cross-channel repurposing. |
+| **Mascot** | The logo is "a mouse mascot with a red bandanna holding a pride flag" (RebelMouse's creative-agency page). |
+| **The brief** | "Mouse original, panda, raccoon and fox": the mascot plus three friends who follow the same visual rules. |
+
+How the rebuild reads it:
+
+* **One chibi rig, four species.** Big head, short body (about 1:1), stubby limbs. Species identity comes
+  only from ears, muzzle, markings and tail. The mouse has big round pink ears, a pink nose, buck teeth and
+  a thin tail. The panda gets black ears, limbs and shoulder band, plus tilted teardrop eye patches. The
+  raccoon wears a bandit mask with pale brows and a ringed bushy tail. The fox has black-tipped pointed
+  ears, white cheeks and chest, black socks and a white-tipped brush.
+* **The bandana is the brand.** It works as a headband, a bandana cap or a neckerchief, with fluttering ties.
+  The held props come from publishing: a pride or brand flag, a megaphone, a newspaper and a pencil.
+* **Three finishes.** Glossy vinyl toy (the default), plush (reusing the volumetric fur shell), and a flat
+  logo finish with graphic shading.
+* **Attitude.** A "rebel attitude" slider sets the resting brow angle, lid line and smirk, so the same
+  character reads anywhere from friendly to defiant.
+* **States follow the agentic-CMS loop:** idle, listening (ears perk), planning (chin in hand), creating
+  (typing on a laptop), optimizing (gears spin, tail wags), publishing (flag up, megaphone aimed at the
+  viewer), growing (celebration) and sleeping (tail curled round). Held props stow while both hands are
+  busy.
+
+Caveats. The logo image could not be fetched from this environment, so proportions, the grey body and the
+headband placement interpret the text description rather than copy the artwork. The blue-and-pink stage
+palette is in the spirit of the RebelMouse site; exact brand colour values were not verified. The mark on
+the brand flag is an original tapered-snout mouse head, not a copy of any existing logo.
+
 ---
 
 ## 2. Requirements that fall out of the research
 
-| Need | Dots | Grok Bot | Muse |
-|---|---|---|---|
-| Surface | short-pile fleece, soft fuzzy silhouette | matte or clay-like vinyl, flat brand colours | longer minky fur, fabrics, leather, metal, glass |
-| Shape | ~11 soft silhouettes | 8 primitives with *continuous* variation | articulated body (head, arms, legs) |
-| Face | beads, diamonds, googly eyes, arcs | vector slit eyes, 16 expressions | beady eyes, blush, stitched or open mouth |
-| Accessories | glasses, beret, bow tie, headphones | rings, thinking dots | hats, jackets, coats, jerseys, held items |
-| Motion | 8 app states | 6–8 states, readable peripherally | waving, typing, cheering, sleeping |
-| Interaction | gaze follows the cursor; click, hold and drag reactions | same | same |
-| Settings | everything above is live-editable, persists, and morphs smoothly | | |
+| Need | Dots | Grok Bot | Muse | Rebels |
+|---|---|---|---|---|
+| Surface | short-pile fleece, soft fuzzy silhouette | matte or clay-like vinyl, flat brand colours | longer minky fur, fabrics, leather, metal, glass | glossy vinyl, plush or flat logo paint |
+| Shape | ~11 soft silhouettes | 8 primitives with *continuous* variation | articulated body (head, arms, legs) | articulated chibi with species ears, muzzle and tail |
+| Face | beads, diamonds, googly eyes, arcs | vector slit eyes, 16 expressions | beady eyes, blush, stitched or open mouth | big tracking eyes, brows, nose, whiskers, teeth |
+| Accessories | glasses, beret, bow tie, headphones | rings, thinking dots | hats, jackets, coats, jerseys, held items | bandana (3 styles), flag, megaphone, newspaper, pencil, glasses |
+| Motion | 8 app states | 6–8 states, readable peripherally | waving, typing, cheering, sleeping | tail sway, ear twitches, agentic-CMS states |
+| Interaction | gaze follows the cursor; click, hold and drag reactions | same | same | same |
+| Settings | everything above is live-editable, persists, and morphs smoothly | | | |
 
 ---
 
@@ -87,7 +120,7 @@ The obvious move is three.js. The question was whether it's the *right* one for 
 
 | Approach | Shape variety and morphing | Plush fur | Lighting quality | Payload | Verdict |
 |---|---|---|---|---|---|
-| **SDF ray marching, raw WebGL2** | Native. Characters *are* blended primitives, so morphs are a `mix()` and squash, stretch and dents are domain warps | Volumetric shell integrated along the ray | Soft shadows and AO fall out of the distance field | ~176 KB single file, **0 deps** | **Chosen** |
+| **SDF ray marching, raw WebGL2** | Native. Characters *are* blended primitives, so morphs are a `mix()` and squash, stretch and dents are domain warps | Volumetric shell integrated along the ray | Soft shadows and AO fall out of the distance field | ~215 KB single file (~70 KB gzipped), **0 deps** | **Chosen** |
 | three.js / Babylon / PlayCanvas (meshes) | Needs procedural meshing (e.g. marching cubes) or morph targets with matching topology. Continuous shape morphs are awkward | Shells and fins, well understood | Shadow maps plus an SSAO pass for soft contact | 170 KB – 1.4 MB gz before content | Great engines, but they fight this content. As a full-screen quad they contribute almost nothing |
 | Rive / Lottie | 2D only | — | — | small | Good for Dots-style UI loops, not 3D |
 | Pre-rendered, video or neural (Meta's path) | Fixed at render time | Photoreal | Baked | MBs, or a GPU server stream | No live customisation or pointer physics |
@@ -108,8 +141,8 @@ The obvious move is three.js. The question was whether it's the *right* one for 
    acne or a screen-space AO pass.
 5. **Fur fits the model.** Plush is a thin participating medium around the skin surface. Marching through
    that shell is a natural extension of marching to the surface.
-6. **One tiny, dependency-free file.** The whole studio, including three renderers, UI and docs drawer,
-   ships as one ~176 KB HTML file.
+6. **One tiny, dependency-free file.** The whole studio, including four renderers, UI and docs drawer,
+   ships as one ~215 KB HTML file (about 70 KB gzipped).
 
 The costs are real. Per-pixel work grows with scene complexity, compile times grow with shader size, and
 picking and anchoring need care. The architecture below exists to manage them.
@@ -159,6 +192,8 @@ Overlay (2D canvas): emotes and name tags, projected from 3D
 | Studio IBL: hemisphere + analytic softboxes with roughness-dependent blur, giving rectangular catchlights in bead eyes | glossy parts |
 | Charlie sheen (Estevez & Kulla), clear coat, wrap lighting | felt, satin, vinyl |
 | Analytic sphere occluders for contact shadows, faded with distance and at the frame edge | floor |
+| Painted markings from nearest-part classification with analytic AA (patches, masks, socks, ringed tails) | Rebels |
+| Flat cloth strips with travelling ripples, waving flag cloth, props scaled about the hand so they stow smoothly | Rebels bandana ties and props |
 | Khronos PBR Neutral tone mapping, exact sRGB encode, blue-ish dither | output (keeps brand colours true) |
 | Edge AA from the closest-approach ratio of missed rays | hard silhouettes |
 | Off-axis lens shift | frames the cast between UI overlays |
@@ -177,6 +212,10 @@ Overlay (2D canvas): emotes and name tags, projected from 3D
 * **States** set the amplitudes of bob, squash, sway, lean, shake and spin, plus props (orbit rings,
   thinking dots, Jolly's keyboard), arm poses and gaze modes, all eased so state changes never snap.
   **Run a task** plays a scripted sequence through every state.
+* **Tails and ears** (Rebels): tails are three-segment chains swayed by a travelling wave that speeds up
+  with excitement, petting and wagging, and curls round for naps. Ears twitch at irregular intervals,
+  perk when listening and flatten under a boop. Family hooks apply species presets and swap arm poses
+  for the held prop, so a megaphone is aimed instead of raised.
 
 ### 4.3 Performance strategy
 
@@ -197,7 +236,8 @@ Overlay (2D canvas): emotes and name tags, projected from 3D
   packs finite parameters and survives boop, hold, pet and trick without NaNs.
 * `npm run interact` drives headless Chromium: gaze follows the pointer left and right, a click GPU-picks
   and selects the right avatar and dents it, the inspector follows, and the state bar works. This is run
-  for all three families.
+  for all four families, plus family-specific checks (shape morphs, accessories, species presets, the
+  aimed megaphone).
 * `npm run shots` takes screenshots of any route and size in software GL, with a GPU sync before capture.
 
 ## 6. Limitations and next steps
@@ -226,6 +266,10 @@ Overlay (2D canvas): emotes and name tags, projected from 3D
 * The Gadgeteer: [Meta Muse Charm keychain](https://the-gadgeteer.com/2026/09/24/meta-muse-charm-ai-assistant-keychain/)
 * Runtime Wire: [Meta gives Muse a live avatar](https://runtimewire.com/article/meta-muse-realtime-avatar)
 * Design Compass: [Why AI agents are getting cute](https://designcompass.org/en/2026/09/30/why-ai-agents-are-getting-cute/)
+* RebelMouse: [Creative agency](https://www.rebelmouse.com/creative-agency) (mascot description) · [2026 platform updates](https://www.rebelmouse.com/2026-platform-updates) · [AI CMS](https://www.rebelmouse.com/ai-cms) · [The agentic website for the AI era](https://www.rebelmouse.com/agentic-website-ai-era) · [How RebelMouse built an agentic CMS](https://www.rebelmouse.com/how-rebelmouse-built-agentic-cms)
+* American Express OPEN Forum: [A HuffPo veteran creates a new content management site](https://www.americanexpress.com/us/small-business/openforum/articles/a-huffpo-veteran-creates-a-new-content-management-site/)
+* journalism.co.uk: [News outlets given 'social front pages' using new RebelMouse platform](https://www.journalism.co.uk/news-outlets-show-social-sharing-with-new-rebelmouse-platform/)
+* Beg to Differ: [RebelMouse as a social brand](https://www.begtodiffer.com/2012/11/16/social_brand_rebelmouse/) · 99designs: [RebelMouse logo contest](https://99designs.com/logo-design/contests/create-logo-rebelmouse-96558) · VectorLogoZone: [RebelMouse logos](https://www.vectorlogo.zone/logos/rebelmouse/index.html)
 * WebGPU support: [Wikipedia: WebGPU](https://en.wikipedia.org/wiki/WebGPU) · [web.dev](https://web.dev/blog/webgpu-supported-major-browsers)
 * Engine sizes: [Utsubo: three.js vs Babylon.js vs PlayCanvas (2026)](https://www.utsubo.com/blog/threejs-vs-babylonjs-vs-playcanvas-comparison)
 * Rive runtime limits: [Rive docs: feature support](https://rive.app/docs/runtimes/features-support)

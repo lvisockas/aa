@@ -163,7 +163,7 @@ button { font: inherit; color: inherit; }
 .hero h1 { font-family: var(--display); font-size: clamp(32px, 4.6vw, 58px); letter-spacing: -0.02em; line-height: 1.02; margin: 0 0 12px; font-weight: 600; text-wrap: balance; }
 .hero p { text-wrap: pretty; }
 .hero p { color: var(--muted); font-size: 16px; margin: 0; }
-.cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .card {
   position: relative;
   border-radius: 22px;
@@ -177,6 +177,7 @@ button { font: inherit; color: inherit; }
 .card .stage { flex: 1; min-height: 340px; }
 .card-body { position: relative; z-index: 2; padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 10px; }
 .card[data-dark='true'] .card-body { color: #f4f4f6; }
+.card[data-dark='true'] .card-body .trait { border-color: rgba(255, 255, 255, 0.55); }
 .card[data-dark='false'] .card-body { color: #141418; }
 .card[data-dark='false'] { border-color: transparent; }
 .card-title { display: flex; align-items: baseline; gap: 8px; }
@@ -515,6 +516,9 @@ body[data-drawer='true'] .drawer-scrim { opacity: 1; pointer-events: auto; }
   .stage-head h2 { font-size: 20px; }
   .stage-head .traits { display: none; }
   .overview { padding: 18px 16px 32px; }
+}
+@media (max-width: 420px) {
+  .tab { padding: 7px 8px; }
 }
 @media (prefers-reduced-motion: reduce) {
   * { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }

@@ -12,6 +12,7 @@ const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));
 await page.goto(pathToFileURL(path.join(root, 'dist/index.html')).href + `?q=low#${family}`);
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 const frames = () => page.evaluate(() => window.__frames || 0);
 for (let i = 0; i < 240 && (await frames()) < 3; i++) await wait(250);
 
@@ -31,7 +32,8 @@ const settle = async (n) => {
   for (let i = 0; i < 400 && (await frames()) < f0 + n; i++) {
     await wait(100);
     // people never hold perfectly still: tiny jiggles keep the pointer "active"
-    if (cursor && i % 10 === 0) await page.mouse.move(cursor.x + (i % 20 ? 1 : -1), cursor.y);
+    // (clamped: a jiggle past the viewport edge fires pointerleave and drops the pointer)
+    if (cursor && i % 10 === 0) await page.mouse.move(clamp(cursor.x + (i % 20 ? 1 : -1), 1, page.viewportSize().width - 2), cursor.y);
   }
 };
 const moveTo = async (x, y) => {
@@ -113,6 +115,21 @@ if (family === 'dots') {
   await page.click('.ctl[data-key="shape"] button[data-v="5"]');
   const sh = await page.evaluate(() => { const s = window.__app.liveStages[0]; return s.avatars[s.selected].config.shape; });
   check('silhouette picker morphs the bot', sh === 5, `shape=${sh}`);
+} else if (family === 'rebel') {
+  await page.click('.ctl[data-key="species"] button[data-v="1"]');
+  await settle(1);
+  const sp = await page.evaluate(() => {
+    const s = window.__app.liveStages[0];
+    const c = s.avatars[s.selected].config;
+    return { species: c.species, body: c.bodyColor, dot: document.querySelector('.roster [aria-pressed="true"] i')?.style.background };
+  });
+  check('species switch applies its palette (panda)', sp.species === 1 && sp.body.toLowerCase() === '#f6f5f1', JSON.stringify(sp));
+  await page.click('details[data-sec="gear"] > summary').catch(() => {});
+  await page.click('.ctl[data-key="prop"] button[data-v="2"]');
+  await page.click('.ctl[data-key="state"] button[data-v="publishing"]');
+  await settle(12);
+  const arm = await page.evaluate(() => { const s = window.__app.liveStages[0]; const a = s.avatars[s.selected]; return { state: a.config.state, rRaise: +a.pose.arms.rRaise.toFixed(2), rFwd: +a.pose.arms.rFwd.toFixed(2) }; });
+  check('a megaphone is aimed (not raised) when publishing', arm.state === 'publishing' && arm.rFwd < 0.1 && arm.rRaise > 1.8, JSON.stringify(arm));
 } else {
   await page.click('.ctl[data-key="species"] button[data-v="1"]');
   await settle(1);

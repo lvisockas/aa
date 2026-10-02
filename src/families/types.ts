@@ -89,6 +89,8 @@ export interface FamilyDef<C extends BaseConfig = BaseConfig> {
   anchors: number;
   look: Look;
   background: string;
+  /** solid colour for exports when `background` is a gradient */
+  backgroundSolid?: string;
   dark: boolean;
   traits: string[];
   states: Record<string, StateSpec>;
@@ -97,6 +99,10 @@ export interface FamilyDef<C extends BaseConfig = BaseConfig> {
   schema: Section[];
   roster(): C[];
   randomize(c: C, rnd: () => number): C;
+  /** returns a new config when changing `key` implies other changes (e.g. species presets) */
+  onChange?(c: C, key: string, value: unknown): C | null;
+  /** swaps the arm pose a state asks for (e.g. aims a held megaphone instead of raising it) */
+  armPose?(c: C, id: string): string;
   /** placements + camera for n characters on a stage of the given aspect */
   compose(n: number, aspect: number, compact: boolean): Composition;
   /** camera framing one character standing at the origin */

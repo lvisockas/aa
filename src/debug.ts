@@ -1,5 +1,5 @@
 // Debug harness: renders one family full-window without the app chrome.
-//   debug.html?family=dots&only=0&cfg={...}&q=high&t=1&stop=2
+//   debug.html?family=dots&only=0&cfg={...}&q=high&t=1&stop=2&warm=120
 import { QUALITY, Renderer, type QualityName, type View } from './engine/renderer';
 import { Avatar } from './avatar/avatar';
 import { FAMILIES } from './app/app';
@@ -22,6 +22,12 @@ const avatars = roster.map((c, i) => new Avatar(fam, c, () => {}, i + 1));
 const comp = fam.compose(avatars.length, innerWidth / innerHeight, false);
 avatars.forEach((a, i) => (a.home = comp.placements[i]));
 const w = window as unknown as { __frames: number; __err: string };
+// warm=N: advance N simulation steps before the first frame (settles state blends cheaply)
+const warm = +(params.get('warm') || 0);
+for (let i = 0; i < warm; i++) {
+  const t = (T >= 0 ? T : 0) - (warm - i) / 60;
+  for (const a of avatars) a.update(1 / 60, { t, pointer: null, pointerIdle: 99, camera: comp.camera.pos, neighbors: avatars, reducedMotion: false });
+}
 r.load(fam.id, fam.shader).then(() => {
   let last = performance.now() / 1000;
   const loop = () => {

@@ -1,6 +1,7 @@
 import shader from '../shaders/muse.glsl';
-import { add, deg, hexToLinear, normalize, quatEuler, scale, type Vec3 } from '../engine/math';
-import type { ArmPose, Pose } from '../avatar/avatar';
+import { deg, hexToLinear, normalize, quatEuler, type Vec3 } from '../engine/math';
+import type { Pose } from '../avatar/avatar';
+import { solveArm } from './limbs';
 import type { CharFrame } from '../engine/renderer';
 import type { BaseConfig, EyeSpec, FaceTarget, FamilyDef, Option } from './types';
 import { groupPhoto, soloCamera } from './compose';
@@ -121,30 +122,6 @@ const SPECIES_DEFAULTS: Record<number, Partial<MuseConfig>> = {
   1: { ears: 1, furLength: 0.03 },
   2: { ears: 0, furLength: 0.022, hair: 2 },
   3: { ears: 0, furLength: 0.085 },
-};
-
-/** Two-segment arm from shoulder angles (local space, metres ~ character units). */
-const solveArm = (side: number, chub: number, a: ArmPose, phase: number, held: number): [Vec3, Vec3, Vec3] => {
-  const raise = side < 0 ? a.lRaise : a.rRaise;
-  const fwd = side < 0 ? a.lFwd : a.rFwd;
-  let bend = side < 0 ? a.lBend : a.rBend;
-  const S: Vec3 = [side * 0.19 * chub, 0.385, 0.0];
-  // upper arm: rotate "down" outward by raise, then forward by fwd
-  let u: Vec3 = [side * Math.sin(raise), -Math.cos(raise), 0];
-  const cf = Math.cos(-fwd), sf = Math.sin(-fwd);
-  u = [u[0], u[1] * cf - u[2] * sf, u[1] * sf + u[2] * cf];
-  u = normalize(u);
-  const E = add(S, scale(u, 0.12));
-  // forearm bends towards the front (or swings side to side when waving)
-  const waveOsc = side > 0 ? a.wave * Math.sin(phase * 9) * 0.55 : a.wave * Math.sin(phase * 9 + 1.3) * 0.25;
-  const tap = a.tap * Math.max(0, Math.sin(phase * 14 + (side > 0 ? 0 : Math.PI))) * 0.25;
-  bend += tap;
-  const fwdDir: Vec3 = [side * waveOsc * 1.4, 0.35, 1];
-  const perp = normalize(add(fwdDir, scale(u, -(fwdDir[0] * u[0] + fwdDir[1] * u[1] + fwdDir[2] * u[2]))));
-  let f = normalize(add(scale(u, Math.cos(bend)), scale(perp, Math.sin(bend))));
-  if (held === 1 && side > 0) f = normalize(add(f, [0, 0.2, 0.1]));
-  const H = add(E, scale(f, 0.105));
-  return [S, E, H];
 };
 
 export const muse: FamilyDef<MuseConfig> = {
@@ -348,6 +325,7 @@ export const muse: FamilyDef<MuseConfig> = {
     base({ name: 'Slugger', hat: 2, hatColor: '#5B3FA0', top: 4, topColor: '#5B3FA0', accent: '#FFFFFF', number: 7, held: 1, mouth: 1 }),
     base({ name: 'Jolly', state: 'waving' }),
   ],
+  onChange: (c, key, value) => (key === 'species' ? applySpecies(c, Number(value)) : null),
   randomize: (c, rnd) => {
     const species = Math.floor(rnd() * 4);
     return {
@@ -416,8 +394,9 @@ export const muse: FamilyDef<MuseConfig> = {
     set(6, c.mouth, Math.max(face.mouthOpen, pose.talk), face.mouth, 0);
     const bc = lin('#FF8FA3');
     set(7, Math.min(1, c.blush + face.cheeks * 0.3), bc[0], bc[1], bc[2]);
-    const [lS, lE, lH] = solveArm(-1, c.chub, pose.arms, pose.phase, c.held);
-    const [rS, rE, rH] = solveArm(1, c.chub, pose.arms, pose.phase, c.held);
+    const rig = { shoulder: [0.19 * c.chub, 0.385, 0] as Vec3, upper: 0.12, fore: 0.105, heldUp: c.held === 1 };
+    const [lS, lE, lH] = solveArm(-1, pose.arms, pose.phase, rig);
+    const [rS, rE, rH] = solveArm(1, pose.arms, pose.phase, rig);
     set(8, lS[0], lS[1], lS[2], 0.064);
     set(9, lE[0], lE[1], lE[2], 0.057);
     set(10, lH[0], lH[1], lH[2], 0.066);

@@ -3,7 +3,8 @@
 export const researchHTML = `
 <div class="doc">
   <p>Three AI-agent launches in eight weeks of 2026 all chose a <b>cute, toy-like face</b> for agents that act on
-  your behalf. This studio rebuilds each visual language as a live, cursor-reactive 3D avatar system.</p>
+  your behalf. This studio rebuilds each visual language as a live, cursor-reactive 3D avatar system, plus a
+  fourth family built around the RebelMouse mascot.</p>
 
   <h3>OpenAI · Dots</h3>
   <p>Announced at DevDay (29 Sep 2026): always-on agents powered by GPT-6 Astra, each with its own cloud computer
@@ -38,10 +39,25 @@ export const researchHTML = `
     transformer streaming 448×768 at 25 fps.</li>
   </ul>
 
+  <h3>RebelMouse · the Rebels</h3>
+  <p>RebelMouse is the publishing platform founded in 2012 by former Huffington Post CTO Paul Berry. Its 2026
+  pitch is an <b>agentic CMS</b>, where AI agents assist, optimise and repurpose content inside the CMS, behind
+  roles, audit logs and review gates. Its mascot is <b>“a mouse with a red bandanna holding a pride flag”</b>.</p>
+  <ul>
+    <li>The original mouse plus a <b>panda</b>, a <b>raccoon</b> and a <b>fox</b> share one chibi rig. Ears, muzzle, markings and
+    tail carry each species: tilted teardrop patches, a bandit mask, a white-tipped brush.</li>
+    <li>The bandana works as a headband, cap or neckerchief. Characters can hold a flag, megaphone, newspaper or
+    pencil, in a vinyl-toy, plush or flat-logo finish. A “rebel attitude” slider sets brows, lids and smirk.</li>
+    <li>States follow the CMS loop: planning, creating on a laptop, optimizing with spinning gears, publishing
+    with the flag up and the megaphone aimed at you, growing, and sleeping with the tail curled.</li>
+    <li>The logo image itself couldn't be fetched here, so proportions and the grey body interpret the text
+    description.</li>
+  </ul>
+
   <h3>Why this renderer (and not three.js by default)</h3>
   <table>
     <tr><th>Option</th><th>Fit for these characters</th></tr>
-    <tr><td><b>SDF ray-marching on raw WebGL2</b> <span class="pill">chosen</span></td><td>Characters are soft primitives blended together, so a signed distance field is their native form. Continuous shape morphs, squash and stretch, and poke dents come free. The field also gives soft shadows and AO, volumetric fur fits naturally, and it ships at about 120 KB with zero dependencies.</td></tr>
+    <tr><td><b>SDF ray-marching on raw WebGL2</b> <span class="pill">chosen</span></td><td>Characters are soft primitives blended together, so a signed distance field is their native form. Continuous shape morphs, squash and stretch, and poke dents come free. The field also gives soft shadows and AO, volumetric fur fits naturally, and it ships as one ~215 KB file (about 70 KB gzipped) with zero dependencies.</td></tr>
     <tr><td>three.js / Babylon / PlayCanvas</td><td>Excellent mesh engines, but blobby morphing shapes need re-meshing or morph targets, plus shadow maps, SSAO and shell geometry for fur. As a full-screen quad they add little.</td></tr>
     <tr><td>Rive / Lottie</td><td>Great 2D state machines (Dots-style UI loops), but not 3D.</td></tr>
     <tr><td>Pre-rendered, video or neural</td><td>Photoreal (Meta's own path), but no live customisation or pointer physics, and the payload is heavy.</td></tr>
@@ -72,6 +88,9 @@ export const researchHTML = `
     <li><a href="https://the-gadgeteer.com/2026/09/24/meta-muse-charm-ai-assistant-keychain/" target="_blank" rel="noopener">The Gadgeteer: Muse Charm keychain</a></li>
     <li><a href="https://runtimewire.com/article/meta-muse-realtime-avatar" target="_blank" rel="noopener">Runtime Wire: Muse Realtime Avatar</a></li>
     <li><a href="https://designcompass.org/en/2026/09/30/why-ai-agents-are-getting-cute/" target="_blank" rel="noopener">Design Compass: Why AI agents are getting cute</a></li>
+    <li><a href="https://www.rebelmouse.com/creative-agency" target="_blank" rel="noopener">RebelMouse: creative agency (the mascot)</a></li>
+    <li><a href="https://www.rebelmouse.com/2026-platform-updates" target="_blank" rel="noopener">RebelMouse: 2026 platform updates (agentic CMS)</a></li>
+    <li><a href="https://www.americanexpress.com/us/small-business/openforum/articles/a-huffpo-veteran-creates-a-new-content-management-site/" target="_blank" rel="noopener">OPEN Forum: a HuffPo veteran creates RebelMouse</a></li>
     <li><a href="https://iquilezles.org/articles/" target="_blank" rel="noopener">Inigo Quilez: SDF, soft shadow and smooth-min articles</a></li>
   </ul>
 </div>`;
