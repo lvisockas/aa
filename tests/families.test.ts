@@ -179,3 +179,24 @@ test('faces draw every part option in every state without errors', () => {
       }
     }
 });
+
+test('every 2D family draws every chip option in every state without errors', () => {
+  const ctx = mockCtx();
+  const env = { t: 1.3, px: 0.004, size: [320, 200] as [number, number], canvas: () => mockCtx(), squash: [1, 1] as [number, number], roll: 0 };
+  for (const f of FAMILY_LIST.filter((f) => f.draw2d)) {
+    const lead = f.roster()[0];
+    for (const sec of f.schema)
+      for (const ctl of sec.controls) {
+        if (ctl.type !== 'chips' && ctl.type !== 'icons' && ctl.type !== 'select') continue;
+        if (ctl.key === 'state' || ctl.key === 'expression') continue;
+        for (const o of ctl.options) {
+          const a = new Avatar(f, { ...lead, [ctl.key]: o.value }, () => {}, 1);
+          for (const state of Object.keys(f.states)) {
+            a.setState(state, 0);
+            for (let i = 0; i < 2; i++) a.update(1 / 30, { t: i / 30, pointer: [0.4, 1, 1], pointerIdle: 0, camera: [0, 1, 6], neighbors: [a], reducedMotion: false });
+            f.draw2d!(ctx, a.config, a.pose, a.face, env);
+          }
+        }
+      }
+  }
+});
