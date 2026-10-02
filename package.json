@@ -11,6 +11,8 @@
     "test": "node scripts/test.mjs",
     "shots": "node scripts/shots.mjs",
     "interact": "node scripts/interact.mjs",
+    "interact:all": "node scripts/interact-all.mjs",
+    "bench": "node scripts/bench.mjs",
     "debug": "node scripts/build.mjs --debug",
     "build:artifact": "node scripts/build.mjs --artifact"
   },

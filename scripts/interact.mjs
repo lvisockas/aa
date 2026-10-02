@@ -7,10 +7,11 @@ import path from 'node:path';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const family = process.argv[2] || 'dots';
 const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
-const page = await browser.newPage({ viewport: { width: 900, height: 600 } });
+const page = await browser.newPage({ viewport: { width: 720, height: 480 } });
 const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));
-await page.goto(pathToFileURL(path.join(root, 'dist/index.html')).href + `?q=low#${family}`);
+// low quality at 40% render scale: the checks are about behaviour, not pixels
+await page.goto(pathToFileURL(path.join(root, 'dist/index.html')).href + `?q=low&res=0.4#${family}`);
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 const frames = () => page.evaluate(() => window.__frames || 0);
@@ -54,11 +55,11 @@ const stageBox = await page.evaluate(() => {
 });
 // 1) look left
 await moveTo(stageBox.x + 5, stageBox.y + stageBox.h * 0.5);
-await settle(40);
+await settle(24);
 const left = await state();
 // 2) look right (pointer over the inspector, far right)
-await moveTo(899, stageBox.y + stageBox.h * 0.5);
-await settle(40);
+await moveTo(719, stageBox.y + stageBox.h * 0.5);
+await settle(24);
 const right = await state();
 // one character per view: measure the one on stage
 const avgLook = (st) => st.avatars[st.selected].lookX + st.avatars[st.selected].yaw;
@@ -107,11 +108,14 @@ for (let i = 0; i < 12; i++) {
 check('hold then release makes the avatar jump', maxHop > 0.02, `max hop ${maxHop.toFixed(3)}`);
 
 // 6) family-specific settings through the inspector
+const morphState = () => page.evaluate(() => { const s = window.__app.liveStages[0]; const a = s.avatars[s.selected]; return { shape: a.config.shape, from: a.config._from?.shape, morph: a.pose.morph }; });
+// morphT is the avatar's timer (pose.morph only copies it on the next frame)
+const startMorph = (shape) => page.evaluate((v) => { const app = window.__app; app.change('shape', v); const s = app.liveStages[0]; const a = s.avatars[s.selected]; return { shape: a.config.shape, from: a.config._from?.shape, morph: a.morphT }; }, shape);
 if (family === 'dots') {
-  await page.click('.ctl[data-key="shape"] button[data-v="3"]');
-  await settle(1);
-  const m = await page.evaluate(() => { const s = window.__app.liveStages[0]; const a = s.avatars[s.selected]; return { shape: a.config.shape, from: a.config._from?.shape, morph: a.pose.morph }; });
-  check('shape change morphs from the old silhouette', m.shape === 3 && m.from !== undefined && m.morph < 1, JSON.stringify(m));
+  const m = await startMorph(3);   // same call the shape chip makes; read before any frame runs
+  await settle(12);
+  const m2 = await morphState();
+  check('shape change morphs from the old silhouette', m.shape === 3 && m.from !== undefined && m.morph === 0 && m2.morph === 1, JSON.stringify([m, m2]));
   await page.click('details[data-sec="acc"] > summary');
   await page.click('.ctl[data-key="hat"] button[data-v="3"]');
   const hat = await page.evaluate(() => { const s = window.__app.liveStages[0]; return s.avatars[s.selected].config.hat; });
@@ -124,10 +128,10 @@ if (family === 'dots') {
   const sh = await page.evaluate(() => { const s = window.__app.liveStages[0]; return s.avatars[s.selected].config.shape; });
   check('silhouette picker morphs the bot', sh === 5, `shape=${sh}`);
 } else if (family === 'poly') {
-  await page.click('.ctl[data-key="shape"] button[data-v="3"]');
-  await settle(1);
-  const m = await page.evaluate(() => { const s = window.__app.liveStages[0]; const a = s.avatars[s.selected]; return { shape: a.config.shape, from: a.config._from?.shape, morph: a.pose.morph }; });
-  check('shape change morphs between faceted bodies', m.shape === 3 && m.from !== undefined && m.morph < 1, JSON.stringify(m));
+  const m = await startMorph(3);
+  await settle(12);
+  const m2 = await morphState();
+  check('shape change morphs between faceted bodies', m.shape === 3 && m.from !== undefined && m.morph === 0 && m2.morph === 1, JSON.stringify([m, m2]));
   await page.click('.ctl[data-key="material"] button[data-v="gem"]');
   const mat = await page.evaluate(() => { const s = window.__app.liveStages[0]; return s.avatars[s.selected].config.material; });
   check('finish chips update the avatar', mat === 'gem', mat);

@@ -39,14 +39,20 @@ npm run dev        # rebuild on change + serve dist/ on http://localhost:5173
 npm run build      # minified single-file dist/index.html
 npm run typecheck  # tsc --noEmit
 npm test           # unit tests (dynamics, framing, family contracts)
-npm run interact   # headless pointer/click smoke test (needs Playwright's Chromium)
+npm run interact   # headless pointer/click smoke test for one family (needs Playwright's Chromium)
+npm run interact:all  # every family, two at a time (~7 min in software GL)
+npm run bench      # ms per frame per family in software GL
 npm run shots -- "t=1#muse" shots/muse.png 1440 900   # headless screenshot
 npm run debug      # dist/debug.html: one family, no UI (debug.html?family=dots&only=0,3&q=high&warm=120)
 npm run build:artifact  # dist/artifact.html for sandboxed hosts (no document skeleton, no downloads)
 ```
 
 Routes: `#dots`, `#grok`, `#muse`, `#rebel`, `#poly` (overview otherwise). URL parameters: `?q=low|medium|high|ultra`
-(quality), `?t=1.5` (freeze time, deterministic renders), `?stop=N` (stop after N frames).
+(quality), `?res=0.4` (pin the render scale), `?t=1.5` (freeze time, deterministic renders), `?stop=N` (stop after N frames).
+
+Headless tests run on SwiftShader (a CPU emulation of the GPU), which is 100× or more slower than real hardware for
+this kind of per-pixel work; the unit tests cover the logic in under a second, and the browser tests run at 40%
+render scale so they check behaviour rather than pixels.
 
 ### Layout
 

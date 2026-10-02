@@ -79,6 +79,7 @@ export class App {
   private fps = 0;
   private demoTimer = 0;
   private fixedT: number | null;
+  private pinnedRes = false;
   private stopAfter: number | null;
   private frames = 0;
   private main: HTMLElement;
@@ -103,6 +104,11 @@ export class App {
     this.main = root.querySelector('#main')!;
     const gl = root.querySelector<HTMLCanvasElement>('#gl')!;
     this.renderer = new Renderer(gl);
+    // ?res=0.4 pins the render scale (tests and software GL); otherwise adaptive
+    if (params.has('res')) {
+      this.renderer.scale = clamp(Number(params.get('res')) || 1, 0.2, 1);
+      this.pinnedRes = true;
+    }
     this.renderer.quality = QUALITY[this.tier];
     this.overlay = new Overlay(root.querySelector<HTMLCanvasElement>('#fx')!);
     this.bindChrome();
@@ -574,7 +580,7 @@ export class App {
       const stat = this.root.querySelector('#stat');
       if (stat) stat.textContent = `${this.fps.toFixed(0)} fps · ${this.tier} · ${Math.round(this.renderer.scale * 100)}% res · ${this.renderer.canvas.width}×${this.renderer.canvas.height}`;
     }
-    if (this.quality !== 'auto' || this.fixedT !== null) return;
+    if (this.quality !== 'auto' || this.fixedT !== null || this.pinnedRes) return;
     this.ema = this.ema * 0.9 + dt * 0.1;
     if (now - this.lastAdapt < 0.8) return;
     const order: QualityName[] = ['low', 'medium', 'high'];

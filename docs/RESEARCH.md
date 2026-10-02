@@ -216,6 +216,7 @@ Overlay (2D canvas): emotes and name tags, projected from 3D
 | Painted markings from nearest-part classification with analytic AA (patches, masks, socks, ringed tails) | Rebels |
 | Eye sockets carved with a smooth max, iris and pupil painted on a clear-coated eyeball, polka dots in cylindrical band coordinates | Rebels |
 | **Faceted ellipsoids** as max-of-planes fields over icosahedral direction sets, CPU-mirrored for anchoring, per-face hashed tint | Polydots |
+| Far-field shortcut: the circumscribed ellipsoid's distance stands in for the plane set beyond the blend's reach (a safe lower bound), so most march steps skip the 32 planes; statically indexed constant arrays keep GPUs fast | Polydots |
 | Flat cloth strips with travelling ripples, waving flag cloth, props scaled about the hand so they stow smoothly | Rebels bandana ties and props |
 | Khronos PBR Neutral tone mapping, exact sRGB encode, blue-ish dither | output (keeps brand colours true) |
 | Edge AA from the closest-approach ratio of missed rays | hard silhouettes |
@@ -262,6 +263,10 @@ Overlay (2D canvas): emotes and name tags, projected from 3D
   for all five families, plus family-specific checks (shape morphs, accessories, species presets, the
   aimed megaphone, faceted-body morphs).
 * `npm run shots` takes screenshots of any route and size in software GL, with a GPU sync before capture.
+* `npm run bench` reports steady-state frame cost per family in software GL (480×300, low quality):
+  Grok ~190 ms, Polydots ~90 ms, Dots and Muse ~320 ms, Rebels ~400 ms per frame. Fur integration and
+  the Rebels' many parts dominate; the faceted Polydots are the cheapest field. On a GPU the same work is
+  two to three orders of magnitude faster, which is what the adaptive resolution and quality tiers manage.
 
 ## 6. Limitations and next steps
 

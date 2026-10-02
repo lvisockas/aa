@@ -45,11 +45,17 @@ const vec3 PV[12] = vec3[12](vec3(0.00000, -0.52573, -0.85065), vec3(-0.52573, -
 // semi-axes r. k lifts the 12 vertex caps: 0 truncates them flat (pentagons
 // between the triangles), 0.26 leaves the pure icosahedron.
 float facetBall(vec3 p, vec3 r, float k) {
+  // far field: the polyhedron sits inside the ellipsoid scaled by its circumradius ratio
+  // (1.2584), so that ellipsoid's distance is a safe, cheap lower bound while marching.
+  // Only taken beyond the smin's reach (4k = 0.048), so the blended surface and its
+  // normals never see the switch; the 0.016 covers the fillet bulge outside the blobs.
+  float far = sdEllipsoid(p, r * 1.27) * 0.9 - 0.016;
+  if (far > 0.05) return far;
   vec3 u = p / r;
   float d = -1e5;
-  // ZERO keeps the compiler from unrolling these at every call site
-  for (int i = ZERO; i < 20; i++) d = max(d, dot(u, PF[i]));
-  for (int i = ZERO; i < 12; i++) d = max(d, dot(u, PV[i]) - k);
+  // constant bounds: the loops unroll and the plane arrays are indexed statically (fast on GPUs)
+  for (int i = 0; i < 20; i++) d = max(d, dot(u, PF[i]));
+  for (int i = 0; i < 12; i++) d = max(d, dot(u, PV[i]) - k);
   return (d - 1.0) * min(r.x, min(r.y, r.z));
 }
 
@@ -63,7 +69,7 @@ vec3 blobSpace(vec4 A, vec4 B, vec3 q) {
 // the body: blobs welded with a small fillet. off grows every blob (bandana shells)
 float bodyShell(Char c, vec3 q, float off) {
   float d = 1e5;
-  for (int k = ZERO; k < 5; k++) {
+  for (int k = 0; k < 5; k++) {
     vec4 A = c.b[2 * k], B = c.b[2 * k + 1];
     if (B.x < 0.002) continue;
     d = smin(d, facetBall(blobSpace(A, B, q), B.xyz + off, c.acc.w), 0.012);
@@ -92,12 +98,16 @@ float hardParts(Char c, vec3 q, out int id) {
   q = warp(c, q);
   id = 1;
   vec3 dp = q - c.poke.xyz;
-  float d = bodyShell(c, q, 0.0) + c.poke.w * exp(-dot(dp, dp) * 45.0);
+  float body = bodyShell(c, q, 0.0) + c.poke.w * exp(-dot(dp, dp) * 45.0);
+  float d = body;
   float s = c.eye.z;
   float blink = c.eye2.x;
+  float faceDist = length(q - faceC(c));
+  bool nearFace = faceDist < 0.75;
+  if (!nearFace) d = min(d, faceDist - 0.7);   // keep the march from stepping over the face parts
 
   // ---- eyes
-  for (int k = 0; k < 2; k++) {
+  if (nearFace) for (int k = 0; k < 2; k++) {
     vec4 A = k == 0 ? c.aEL : c.aER;
     vec3 n = (k == 0 ? c.nEL : c.nER).xyz;
     int kind = int((k == 0 ? c.eye.x : c.eye.y) + 0.5);
@@ -133,7 +143,7 @@ float hardParts(Char c, vec3 q, out int id) {
   }
 
   // ---- nose, whiskers, mouth (all laid out in the nose anchor's frame)
-  {
+  if (nearFace) {
     vec3 n = c.nN.xyz;
     vec3 T = normalize(cross(vec3(0.0, 1.0, 0.0), n));
     vec3 Bv = cross(n, T);
@@ -184,6 +194,7 @@ float hardParts(Char c, vec3 q, out int id) {
       vec3 cen = k == 0 ? c.earL.xyz : c.earR.xyz;
       float es = c.earL.w;
       vec3 p = q - cen;
+      if (length(p) > es * 1.4) { d = min(d, length(p) - es * 1.3); continue; }
       p.xy = rot2(side * c.earR.w * (k == 0 ? 1.0 : 0.7)) * p.xy;
       p.xz = rot2(side * 0.4) * p.xz;
       float outer = facetBall(p, vec3(es, es, es * 0.26), 0.08);
@@ -196,7 +207,8 @@ float hardParts(Char c, vec3 q, out int id) {
   // ---- bandana: a faceted shell of the body cut to a band, with a knot and tails
   int bs = int(c.band.x + 0.5);
   if (bs > 0) {
-    float shell = bodyShell(c, q, 0.014);
+    // the real offset shell near the body; its lower bound (body - 0.014) further out
+    float shell = body < 0.04 ? bodyShell(c, q, 0.014) : body - 0.014;
     float band;
     vec3 kp;
     vec4 A0 = c.b[0], B0 = c.b[1];
@@ -210,9 +222,11 @@ float hardParts(Char c, vec3 q, out int id) {
       band = max(shell, abs(q.y - c.bandA.y) - 0.036);
       kp = vec3(0.04, c.bandA.y - 0.01, c.bandA.w);
     }
-    float knot = facetBall(q - kp, vec3(0.045, 0.036, 0.036), 0.1);
-    float rib = 1e5;
-    for (int k = 0; k < 2; k++) {
+    float knot = 1e5, rib = 1e5;
+    float nearKnot = length(q - kp);
+    if (nearKnot > 0.34) knot = nearKnot - 0.3;
+    else knot = facetBall(q - kp, vec3(0.045, 0.036, 0.036), 0.1);
+    if (nearKnot < 0.34) for (int k = 0; k < 2; k++) {
       float fk = float(k);
       float sw = c.bandA.z * (1.0 + 0.5 * fk) + 0.3 * fk;
       vec3 dir = normalize(vec3(0.5 - 0.3 * fk, -0.8, (bs == 3 ? 0.3 : -0.4) + 0.15 * sw));
@@ -229,7 +243,9 @@ float hardParts(Char c, vec3 q, out int id) {
     if (band < d) { d = band; id = 11; }
 
     // ---- flag planted at the knot
-    if (c.props.z > 0.5) {
+    float flagDist = length(q - kp - vec3(0.1, 0.4, 0.0));
+    if (c.props.z > 0.5 && flagDist >= 0.65) d = min(d, flagDist - 0.6);
+    if (c.props.z > 0.5 && flagDist < 0.65) {
       vec3 dir = normalize(vec3(0.12, 1.0, -0.08));
       vec3 top = kp + dir * 0.52;
       float pole = sdCapsule(q, kp - dir * 0.04, top, 0.008);
