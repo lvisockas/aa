@@ -165,7 +165,7 @@ export class App {
           <button class="tab" role="tab" data-route="poly" title="Polydots · mash-up"><span class="long">Polydots</span><span class="short">Poly</span><small>mash-up</small></button>
           <button class="tab" role="tab" data-route="bomber" title="Bombers · Arcade blasters">Bombers<small>Arcade blasters</small></button>
           <button class="tab" role="tab" data-route="crew" title="Crew · Space impostors">Crew<small>Space impostors</small></button>
-          <button class="tab" role="tab" data-route="doodle" title="Doodles · 2D"><span class="long">Doodles</span><span class="short">2D</span><small>2D</small></button>
+          <button class="tab" role="tab" data-route="doodle" title="Doodles · 2D"><span class="long">Doodles</span><span class="short">Doodles</span><small>2D</small></button>
           <button class="tab" role="tab" data-route="clawd" title="Clawd · Claude Code">Clawd<small>Claude Code</small></button>
           <button class="tab" role="tab" data-route="faces" title="Faces · Notion-style">Faces<small>Notion-style</small></button>
           <button class="tab" role="tab" data-route="ghost" title="Ghosts · Imaginary">Ghosts<small>Imaginary</small></button>

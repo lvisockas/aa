@@ -122,6 +122,12 @@ button { font: inherit; color: inherit; }
 .tab[aria-selected='true'] { background: var(--panel); color: var(--text); box-shadow: var(--shadow); }
 .tab small { display: none; }   /* makers show on the cards, the studio header and the tooltip */
 .tab .short { display: none; }
+/* sixteen tabs: below ~1640px use the short names (All, Grok, Poly) and drop the brand text */
+@media (max-width: 1640px) {
+  .brand span { display: none; }
+  .tab .long { display: none; }
+  .tab .short { display: inline; }
+}
 .top-actions { display: flex; gap: 6px; align-items: center; }
 .icon-btn {
   display: inline-flex;
