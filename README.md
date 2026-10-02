@@ -2,13 +2,14 @@
 
 Interactive, cursor-reactive 3D avatars inspired by the three agent mascots of autumn 2026,
 **OpenAI Dots**, **xAI Grok Bot** and **Meta Muse ("Jolly")**, plus a family built around the
-**RebelMouse** mascot and a low-poly **Dots × RebelMouse** mash-up. Every character is rendered live by a
-custom signed-distance-field ray marcher on WebGL2, with no three.js, no meshes and no downloaded assets,
-and every character is fully customisable.
+**RebelMouse** mascot, a low-poly **Dots × RebelMouse** mash-up and five **2D doodles**. Every character
+is rendered live, with no three.js and no downloaded assets, and every character is fully customisable.
+The renderer is a hybrid: a WebGL2 signed-distance-field ray marcher for the soft characters, a mesh
+rasteriser in the same renderer for the low-poly ones, and Canvas2D for the 2D styles.
 
-| Dots (OpenAI) | Grok Bot (xAI) | Muse (Meta) | Rebels (RebelMouse) | Polydots (mash-up) |
-|---|---|---|---|---|
-| Plush fleece blobs with bead, diamond and googly eyes, berets, glasses, bow ties, headphones | Inflated geometric shapes with vector slit eyes, 16 expressions, shapes that morph like jelly | Articulated plush "Jolly" cast with longer fur, outfits, hats and held items | The bandana-wearing mouse plus a panda, raccoon and fox: swishing tails, flags and megaphones, in vinyl, plush or flat-logo finishes | Dots silhouettes cut into true low-poly facets, with mouse ears, bead-gem eyes, a bandana and a bead tail, in cut-paper, gem or vinyl finishes |
+| Dots (OpenAI) | Grok Bot (xAI) | Muse (Meta) | Rebels (RebelMouse) | Polydots (mash-up) | Doodles (2D) |
+|---|---|---|---|---|---|
+| Plush fleece blobs with bead, diamond and googly eyes, berets, glasses, bow ties, headphones | Inflated geometric shapes with vector slit eyes, 16 expressions, shapes that morph like jelly | Articulated plush "Jolly" cast with longer fur, outfits, hats and held items | The bandana-wearing mouse plus a panda, raccoon and fox: swishing tails, flags and megaphones, in vinyl, plush or flat-logo finishes | Dots silhouettes cut into true low-poly facets, with mouse ears, bead-gem eyes, a bandana and a bead tail, in cut-paper, gem or vinyl finishes | Five characters in five simple styles: flat vector, ink doodle, pixel art, paper cut-out, risograph |
 
 **Open `dist/index.html` in any modern browser.** It's a single self-contained file.
 
@@ -28,7 +29,7 @@ Short version: these characters *are* soft primitives blended together, which is
 Ray marching that field directly gives continuous shape morphing, poke dents, squash and stretch, soft
 shadows, ambient occlusion and volumetric fur almost for free, in one ~240 KB file. A mesh engine would
 need remeshing or morph targets, shadow maps, SSAO and shell geometry to get the same look.
-**See [docs/RESEARCH.md](docs/RESEARCH.md)** for the product research (all five families) and the full
+**See [docs/RESEARCH.md](docs/RESEARCH.md)** for the product research (all six families), the hybrid-rendering decision and the full
 comparison: three.js, Babylon, PlayCanvas, Rive, pre-rendered and neural video, Gaussian splats, WebGPU.
 
 ## Development
@@ -40,14 +41,14 @@ npm run build      # minified single-file dist/index.html
 npm run typecheck  # tsc --noEmit
 npm test           # unit tests (dynamics, framing, family contracts)
 npm run interact   # headless pointer/click smoke test for one family (needs Playwright's Chromium)
-npm run interact:all  # every family, two at a time (~7 min in software GL)
+npm run interact:all  # every family, two at a time (a few minutes in software GL)
 npm run bench      # ms per frame per family in software GL
 npm run shots -- "t=1#muse" shots/muse.png 1440 900   # headless screenshot
 npm run debug      # dist/debug.html: one family, no UI (debug.html?family=dots&only=0,3&q=high&warm=120)
 npm run build:artifact  # dist/artifact.html for sandboxed hosts (no document skeleton, no downloads)
 ```
 
-Routes: `#dots`, `#grok`, `#muse`, `#rebel`, `#poly` (overview otherwise). URL parameters: `?q=low|medium|high|ultra`
+Routes: `#dots`, `#grok`, `#muse`, `#rebel`, `#poly`, `#doodle` (overview otherwise). URL parameters: `?q=low|medium|high|ultra`
 (quality), `?res=0.4` (pin the render scale), `?t=1.5` (freeze time, deterministic renders), `?stop=N` (stop after N frames).
 
 Headless tests run on SwiftShader (a CPU emulation of the GPU), which is 100× or more slower than real hardware for
@@ -60,7 +61,8 @@ render scale so they check behaviour rather than pixels.
 src/
   engine/      renderer (multi-view WebGL2), program compile, noise and strand textures, springs, math
   shaders/     common_head.glsl (SDF library, materials) · common_main.glsl (march, fur, shading)
-               dots.glsl · grok.glsl · muse.glsl · rebel.glsl · poly.glsl (one distance field + materials per family)
+               dots.glsl · grok.glsl · muse.glsl · rebel.glsl (one distance field + materials per family)
+               lighting.glsl (shared lights) · mesh.vert/frag.glsl (rasterised families)
   families/    presets, settings schema, expressions, states, parameter packing, compositions, arm rig
   avatar/      per-character brain: gaze, blinks, expression swaps, squash/hop, reactions, states
   app/         stages (DOM-hosted views, picking, framing), overlay emotes, app shell

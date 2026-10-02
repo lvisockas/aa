@@ -1,7 +1,7 @@
 import type { Renderer, View } from '../engine/renderer';
 
 /** Render one stage and download it as a PNG (not available in sandboxed viewers). */
-export const downloadStagePNG = (renderer: Renderer, view: View, background: string, filename: string): void => {
+export const downloadStagePNG = (renderer: Renderer, view: View, background: string, filename: string, canvas2d?: HTMLCanvasElement | null): void => {
   renderer.render([view]);
   const gl = renderer.canvas;
   const sx = gl.width / window.innerWidth;
@@ -13,7 +13,8 @@ export const downloadStagePNG = (renderer: Renderer, view: View, background: str
   const ctx = out.getContext('2d')!;
   ctx.fillStyle = background;
   ctx.fillRect(0, 0, out.width, out.height);
-  ctx.drawImage(gl, r.left * sx, r.top * sy, r.width * sx, r.height * sy, 0, 0, out.width, out.height);
+  if (canvas2d) ctx.drawImage(canvas2d, 0, 0, out.width, out.height);   // 2D families draw into their own canvas
+  else ctx.drawImage(gl, r.left * sx, r.top * sy, r.width * sx, r.height * sy, 0, 0, out.width, out.height);
   out.toBlob((b) => {
     if (!b) return;
     const url = URL.createObjectURL(b);

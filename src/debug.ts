@@ -28,7 +28,7 @@ for (let i = 0; i < warm; i++) {
   const t = (T >= 0 ? T : 0) - (warm - i) / 60;
   for (const a of avatars) a.update(1 / 60, { t, pointer: null, pointerIdle: 99, camera: comp.camera.pos, neighbors: avatars, reducedMotion: false });
 }
-r.load(fam.id, fam.shader).then(() => {
+r.load(fam.id, fam.shader, fam.raster).then(() => {
   let last = performance.now() / 1000;
   const loop = () => {
     const now = performance.now() / 1000;

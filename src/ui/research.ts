@@ -61,6 +61,12 @@ export const researchHTML = `
   flat. A facet slider slides the look from soccer ball to pure icosahedron, shapes morph through intermediate
   polyhedra, and the CPU mirrors the field to anchor gem eyes, nose and ears on the actual facets.</p>
 
+  <h3>Doodles · five 2D art styles</h3>
+  <p>Five 2D characters, each in its own simple style: Mochi in <b>flat vector</b>, Scribble in <b>ink doodle</b>
+  (lines that boil like hand-drawn animation), Bit in <b>pixel art</b>, Fern in <b>paper cut-out</b> and Ribbit in
+  <b>risograph</b> (two inks overprinted, halftone, misregistration). Any character can wear any style, and they
+  share the 3D families' brain: gaze, blinks, boops, states.</p>
+
   <h3>Why this renderer (and not three.js by default)</h3>
   <table>
     <tr><th>Option</th><th>Fit for these characters</th></tr>
@@ -71,6 +77,10 @@ export const researchHTML = `
     <tr><td>Gaussian splats</td><td>Captured, not parametric. Can't change shape or outfit.</td></tr>
     <tr><td>WebGPU</td><td>The same algorithms would port easily, but it covers about 87% of users (Firefox on Linux and Android is still missing) and headless CI is harder. WebGL2 today, with WGSL as the upgrade path.</td></tr>
   </table>
+
+  <p><b>Hybrid by design.</b> Ray marching suits the soft, morphing, furry characters, but it was the wrong tool
+  for the low-poly Polydots (16 fps on a laptop GPU). They are now rasterised as triangles inside the same
+  renderer, under the same lights, and the Doodles use Canvas2D. Each family gets the technique that fits it.</p>
 
   <h3>Under the hood</h3>
   <ul>

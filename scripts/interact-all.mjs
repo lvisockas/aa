@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const families = ['dots', 'grok', 'muse', 'rebel', 'poly'];
+const families = ['dots', 'grok', 'muse', 'rebel', 'poly', 'doodle'];
 const parallel = Math.max(1, +(process.argv[2] || 2));
 const t0 = Date.now();
 const results = new Map();

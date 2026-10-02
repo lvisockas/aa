@@ -66,6 +66,17 @@ export interface StateSpec {
 
 export type EmoteKind = 'heart' | 'sparkle' | 'bang' | 'question' | 'zzz' | 'note' | 'sweat' | 'star' | 'check';
 
+/** what a 2D family's draw2d gets besides the context */
+export interface Draw2DEnv {
+  t: number;
+  /** one device pixel in character units */
+  px: number;
+  /** target size in device pixels */
+  size: [number, number];
+  /** offscreen 2D context of the given size (cached by id), transform reset and cleared */
+  canvas: (id: string, w: number, h: number) => CanvasRenderingContext2D;
+}
+
 export interface Personality {
   /** body orientation follow: frequency (Hz), damping, response */
   body: [number, number, number];
@@ -86,6 +97,10 @@ export interface FamilyDef<C extends BaseConfig = BaseConfig> {
   maker: string;
   tagline: string;
   shader: string;
+  /** drawn as a triangle mesh (CharFrame.mesh, shader = mesh fragment shader) instead of ray marched */
+  raster?: boolean;
+  /** 2D families: draw the character with Canvas2D (ctx is in character units, +y up, origin at the feet) */
+  draw2d?(ctx: CanvasRenderingContext2D, c: C, pose: Pose, face: FaceState, env: Draw2DEnv): void;
   anchors: number;
   look: Look;
   background: string;

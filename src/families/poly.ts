@@ -1,16 +1,18 @@
-import shader from '../shaders/poly.glsl';
+import shader from '../shaders/mesh.frag.glsl';
 import { clamp, deg, hexToLinear, lerp, normalize, type Vec3 } from '../engine/math';
 import type { Pose } from '../avatar/avatar';
 import type { CharFrame } from '../engine/renderer';
 import type { BaseConfig, EyeSpec, FaceTarget, FamilyDef, Option } from './types';
 import { groupPhoto, soloCamera } from './compose';
+import { MAT, MeshBuilder, addv, clipPolyhedron, cross, faceHash, mapFaces, polyhedron, scl, type Plane } from '../engine/mesh';
 import { DOTS_SHAPES } from './dots';
 
 /**
  * Polydots: a low-poly mash-up of OpenAI's Dots blobs and the RebelMouse mouse.
- * The body is a union of faceted ellipsoids; this file mirrors the shader's
- * distance field so eyes, nose, ears and tail can be anchored on the facets
- * from the CPU (no GPU anchor pass needed).
+ * Unlike the other families this one is rasterised: pack() builds the character
+ * as flat-shaded triangles every frame. The body is a union of faceted
+ * ellipsoids (convex polyhedra cut by an icosahedron's plane set); a CPU
+ * distance field of the same polyhedra anchors eyes, nose, ears and tail.
  */
 export interface PolyConfig extends BaseConfig {
   shape: number;
@@ -290,6 +292,7 @@ export const poly: FamilyDef<PolyConfig> = {
   tagline: 'Low-poly facets · Dots silhouettes · mouse ears, tail and bandana',
   subtitle: 'A mash-up: Dots blobs with RebelMouse ears, cut from paper',
   shader,
+  raster: true,
   anchors: 0,
   background: 'linear-gradient(165deg, #FFFCF5 0%, #F1EADB 60%, #E6DCC8 100%)',
   backgroundSolid: '#F3ECDD',
@@ -468,82 +471,295 @@ export const poly: FamilyDef<PolyConfig> = {
   }),
   face: polyFace,
   pack: (c: PolyConfig, pose: Pose, f: CharFrame, face: FaceTarget) => {
-    const d = f.data;
-    d.fill(0);
-    const set = (k: number, a: number, b: number, cc: number, dd: number) => {
-      d[k * 4] = a;
-      d[k * 4 + 1] = b;
-      d[k * 4 + 2] = cc;
-      d[k * 4 + 3] = dd;
-    };
+    f.data.fill(0);   // mesh family: the shader parameters are unused
+    const mb = builderFor(f);
+    mb.reset();
     const m = pose.morph;
     const ease = m * m * (3 - 2 * m);
     const from = c._from && m < 1 ? clamp(c._from.shape, 0, SHAPES.length - 1) : c.shape;
     const S = blend(SHAPES[from], SHAPES[c.shape], m < 1 ? ease : 1);
     const w = c.width;
     const blobs = S.blobs.map((b) => [b[0] * w, b[1], b[2], b[3], b[4] * w, b[5], b[6] * Math.sqrt(w), b[7]] as Blob);
-    blobs.forEach((b, i) => {
-      set(2 * i, b[0], b[1], b[2], b[3]);
-      set(2 * i + 1, b[4], b[5], b[6], b[7]);
-    });
     const k = lerp(0.0, 0.26, c.facets);
+    const fin = Math.max(0, ['paper', 'gem', 'toy'].indexOf(c.material));
+    const amp = [0.18, 0.12, 0.06][fin];
+    const tintOf = (salt: number) => (i: number) => 1 - amp / 2 + amp * faceHash(i, salt);
     const col = hexToLinear(c.color), acc = hexToLinear(c.accentColor), bc = hexToLinear(c.bandanaColor);
-    set(10, col[0], col[1], col[2], Math.max(0, ['paper', 'gem', 'toy'].indexOf(c.material)));
-    set(11, acc[0], acc[1], acc[2], k);
-    set(12, c.bandana, bc[0], bc[1], bc[2]);
+    const live = blobs.filter((b) => b[4] >= 0.002);
 
-    // anchors on the faceted surface, traced from the face ellipsoid's centre
+    // ---- body: one faceted ellipsoid per blob (the z-buffer does the union)
+    live.forEach((b, bi) => mb.faces(blobFaces(b, k, 0), col, MAT.body, tintOf(bi + 1)));
+
+    // ---- anchors on the faceted surface, traced from the face ellipsoid's centre
     const fc: Vec3 = [S.faceC[0] * w, S.faceC[1], S.faceC[2]];
     const fr: Vec3 = [S.faceR[0] * w, S.faceR[1], S.faceR[2]];
     const ex = 0.42 * c.eyeSpacing * fr[0], ey = (0.05 + c.eyeHeight) * fr[1];
     const [eL, nL] = anchor(blobs, k, fc, [-ex, ey, fr[2]]);
     const [eR, nR] = anchor(blobs, k, fc, [ex, ey, fr[2]]);
     const [np, nn] = anchor(blobs, k, fc, [0, ey - 0.4 * fr[1], fr[2]]);
-    const earR = 0.125 * c.ears;
-    const earDir = (side: number): Vec3 => [side * 0.78 * fr[0], fr[1], -0.15 * fr[2]];
-    const [aL] = anchor(blobs, k, fc, earDir(-1));
-    const [aR] = anchor(blobs, k, fc, earDir(1));
-    const dL = nrm(earDir(-1)), dR = nrm(earDir(1));
-    const perk = (pose.props.perk ?? 0) * 0.5 + pose.excite * 0.2;
-    const flatten = pose.pokeAmp * 8;
-    const twitch = Math.sin(pose.phase * 2.3) > 0.985 ? 0.3 : 0;
-    const wiggle = 0.25 * twitch + flatten - 0.15 * perk;
-    const [tailRoot] = anchor(blobs, k, [0, 0.32, 0], [0.0, -0.25, -1]);
-    const [waist] = anchor(blobs, k, [0, S.neckY, 0], [0, 0, 1]);
+    const s = c.eyeSize * face.l.w;
 
-    set(13, S.headY, S.neckY, Math.sin(pose.phase * 3.1) * 0.25 + pose.roll * 1.2 + pose.headYaw * 0.8, waist[2] + 0.012);
-    set(14, face.l.kind, face.r.kind, c.eyeSize * face.l.w, 0);
-    set(15, pose.blink, 0.5 * (face.l.lid + face.r.lid), pose.lookX, pose.lookY);
-    const mouthStyle = c.mouth === 1 ? -1 : c.mouth === 2 ? 2 : 0;
-    set(16, mouthStyle, Math.max(face.mouthOpen, pose.talk), face.mouth, Math.min(1, c.blush + face.cheeks * 0.4));
-    set(17, eL[0], eL[1], eL[2], fc[0]);
-    set(18, nL[0], nL[1], nL[2], fc[1]);
-    set(19, eR[0], eR[1], eR[2], fc[2]);
-    set(20, nR[0], nR[1], nR[2], fr[1]);
-    set(21, np[0], np[1], np[2], c.nose ? 1 : 0);
-    set(22, nn[0], nn[1], nn[2], c.whiskers ? 1 : 0);
-    set(23, aL[0] + dL[0] * earR * 0.6, aL[1] + dL[1] * earR * 0.6, aL[2] + dL[2] * earR * 0.6, c.ears > 0.01 ? earR : 0);
-    set(24, aR[0] + dR[0] * earR * 0.6, aR[1] + dR[1] * earR * 0.6, aR[2] + dR[2] * earR * 0.6, wiggle);
-    set(25, pose.poke[0], pose.poke[1], pose.poke[2], pose.pokeAmp);
-    set(26, pose.wobble * 0.7, pose.wobblePhase, pose.excite, 0);
-    set(27, pose.props.bits ?? 0, pose.phase * 2.4, c.bandana > 0 ? c.flag : 0, Math.max(0, c.flag - 1));
+    // ---- eyes: octahedral gems that slide across the face with the gaze
+    const black: Vec3 = [0.01, 0.01, 0.01], ink: Vec3 = [0.03, 0.025, 0.025];
+    ([[eL, nL, face.l.kind], [eR, nR, face.r.kind]] as Array<[Vec3, Vec3, number]>).forEach(([A, n, kind]) => {
+      const F = frameOn(n);
+      const a = addv(A, addv(scl(F.T, pose.lookX * 0.022 * s), scl(F.B, pose.lookY * 0.016 * s)));
+      const at = (x: number, y: number, z: number): Vec3 => addv(a, addv(addv(scl(F.T, x), scl(F.B, y)), scl(n, z)));
+      if (kind === 3 || pose.blink > 0.9) {
+        const ew = 0.042 * s;
+        mb.stroke(at(-ew, 0, 0.004), at(ew, 0, 0.004), n, 0.008 * s, 0.006 * s, ink, MAT.thread);
+      } else if (kind === 2) {
+        const ew = 0.04 * s;
+        arc(mb, (th) => at(ew * Math.sin(th), ew * Math.cos(th) - 0.45 * ew, 0.004), -1.1, 1.1, 6, n, 0.009 * s, ink);
+      } else {
+        const sy = Math.max(0.12, 1 - 0.8 * pose.blink - 0.45 * 0.5 * (face.l.lid + face.r.lid));
+        const r = 0.05 * s * (kind === 4 ? 1.25 : 1);
+        if (kind === 1) {
+          const R = 1.35 * r;
+          octa(mb, (x, y, z) => at(x * R, y * R * sy, 0.004 + (z * R) / 3.2), black, MAT.gem);
+        } else {
+          octa(mb, (x, y, z) => at(x * r, y * r * sy, 0.3 * r + z * r), black, MAT.gem);
+        }
+      }
+    });
 
-    // tail: three beads trailing from the back, swaying with mood
-    const wag = pose.props.wag ?? 0;
-    const curl = pose.props.curl ?? 0;
-    const amp = (0.25 + 0.4 * pose.excite + 0.5 * pose.pet + 0.4 * wag) * (1 - 0.6 * curl);
-    const freq = 1.6 + 2.5 * wag + 2.0 * pose.pet;
-    let p: Vec3 = [tailRoot[0], tailRoot[1], tailRoot[2] + 0.02];
-    let yaw = 0, pitch = -0.4 * (1 - curl) - 0.9 * curl;
-    const radii = [0.055, 0.045, 0.035];
-    for (let i = 0; i < 3; i++) {
-      yaw += amp * Math.sin(pose.phase * freq - i * 0.8) * (0.6 + 0.3 * i) - pose.yaw * 0.1 + curl * 0.9;
-      pitch += 0.35 * (1 - curl);
-      const len = 0.075 + 0.01 * i;
-      p = [p[0] + Math.sin(yaw) * Math.cos(pitch) * len, p[1] + Math.sin(pitch) * len * 0.6, p[2] - Math.cos(yaw) * Math.cos(pitch) * len];
-      set(28 + i, p[0], p[1], p[2], radii[i]);
+    // ---- nose, whiskers, mouth in the nose anchor's frame
+    {
+      const F = frameOn(nn);
+      const at = (x: number, y: number, z: number): Vec3 => addv(np, addv(addv(scl(F.T, x), scl(F.B, y)), scl(nn, z)));
+      if (c.nose) {
+        const nc = lerpV(acc, [0.3, 0.05, 0.1], 0.35);
+        const R = 0.04 * s;
+        octa(mb, (x, y, z) => at(x * R, y * R, 0.012 + z * R), nc, MAT.nose);
+      }
+      if (c.whiskers) {
+        for (const side of [-1, 1])
+          for (let wi = 0; wi < 3; wi++) {
+            const fw = wi - 1;
+            mb.stroke(at(side * 0.035, 0.004 + fw * 0.013, 0.008), at(side * 0.2, -0.004 + fw * 0.036, 0), nn, 0.0034, 0.0034, ink, MAT.thread);
+          }
+      }
+      const open = Math.max(face.mouthOpen, pose.talk);
+      const my = -0.058 * s;
+      if (open > 0.05) {
+        const S0 = 0.03 * s * (0.6 + 0.6 * open);
+        octa(mb, (x, y, z) => at(x * S0, my + y * S0 * (0.6 + open), -0.002 + (z * S0) / 2), [0.2, 0.03, 0.05], MAT.mouth);
+      } else if (c.mouth !== 1) {
+        const r2 = 0.03 * s * (1 + 0.3 * Math.abs(face.mouth));
+        const sg = face.mouth + 1e-3 >= 0 ? 1 : -1;
+        arc(mb, (th) => at(r2 * Math.sin(th), my + sg * r2 * (0.7 - Math.cos(th)), -0.002), -0.75, 0.75, 5, nn, 0.0055 * s, ink);
+      }
+      if (c.mouth === 2) {
+        for (const side of [-1, 1]) box(mb, at(side * 0.011 * s, my - 0.016 * s, 0.002), [0.0095 * s, 0.015 * s, 0.005 * s], F.T, F.B, nn, [0.97, 0.96, 0.92], MAT.teeth);
+      }
     }
+
+    // ---- ears: faceted discs with an inset panel
+    if (c.ears > 0.01) {
+      const earR = 0.125 * c.ears;
+      const perk = (pose.props.perk ?? 0) * 0.5 + pose.excite * 0.2;
+      const flatten = pose.pokeAmp * 8;
+      const twitch = Math.sin(pose.phase * 2.3) > 0.985 ? 0.3 : 0;
+      const wiggle = 0.25 * twitch + flatten - 0.15 * perk;
+      for (const side of [-1, 1]) {
+        const dir: Vec3 = [side * 0.78 * fr[0], fr[1], -0.15 * fr[2]];
+        const [a] = anchor(blobs, k, fc, dir);
+        const cen = addv(a, scl(nrm(dir), earR * 0.6));
+        const wig = side * wiggle * (side < 0 ? 1 : 0.7);
+        const toChar = (p2: Vec3): Vec3 => {
+          let [x, y, z] = p2;
+          [x, z] = rot(x, z, -side * 0.4);
+          [x, y] = rot(x, y, -wig);
+          return [cen[0] + x, cen[1] + y, cen[2] + z];
+        };
+        mb.faces(mapFaces(unitFaces(0.08), (u) => toChar([u[0] * earR, u[1] * earR, u[2] * earR * 0.26])), col, MAT.finish, tintOf(10 + side));
+        mb.faces(mapFaces(unitFaces(0.08), (u) => toChar([u[0] * earR * 0.68, u[1] * earR * 0.68, u[2] * earR * 0.26 + earR * 0.1])), acc, MAT.finish, tintOf(20 + side));
+      }
+    }
+
+    // ---- bandana: the body grown by a few millimetres, clipped to a band, with knot, ribbons, flag
+    if (c.bandana > 0) {
+      const bs = c.bandana;
+      const [waist] = anchor(blobs, k, [0, S.neckY, 0], [0, 0, 1]);
+      const cuts: Plane[] =
+        bs === 1 ? [{ n: [0, 1, 0], d: S.headY + 0.03 }, { n: [0, -1, 0], d: -(S.headY - 0.03) }]
+        : bs === 2 ? [{ n: [0, -1, 0], d: -(S.headY - 0.02) }]
+        : [{ n: [0, 1, 0], d: S.neckY + 0.036 }, { n: [0, -1, 0], d: -(S.neckY - 0.036) }];
+      live.forEach((b, bi) => {
+        let fs = blobFaces(b, k, 0.014);
+        for (const pl of cuts) fs = clipPolyhedron(fs, pl);
+        if (fs.length) mb.faces(fs, bc, MAT.finish, tintOf(30 + bi));
+      });
+      const A0 = blobs[0];
+      const kp: Vec3 = bs === 3 ? [0.04, S.neckY - 0.01, waist[2] + 0.012] : [A0[0] + A0[4] * 0.5, S.headY, A0[2] - A0[6] * 0.86];
+      mb.faces(mapFaces(unitFaces(0.1), (u) => [kp[0] + u[0] * 0.045, kp[1] + u[1] * 0.036, kp[2] + u[2] * 0.036]), bc, MAT.finish, tintOf(40));
+      const sway = Math.sin(pose.phase * 3.1) * 0.25 + pose.roll * 1.2 + pose.headYaw * 0.8;
+      for (let ri = 0; ri < 2; ri++) {
+        const sw = sway * (1 + 0.5 * ri) + 0.3 * ri;
+        const dir = nrm([0.5 - 0.3 * ri, -0.8, (bs === 3 ? 0.3 : -0.4) + 0.15 * sw]);
+        const L = 0.14 + 0.03 * ri;
+        const wd = nrm(cross(dir, [0, 0, 1]));
+        const tn = cross(dir, wd);
+        const base = addv(kp, scl(dir, L * 0.5));
+        mb.faces(
+          mapFaces(unitFaces(0.2), (u) => {
+            let x = u[0] * 0.026, z = u[2] * 0.007;
+            [x, z] = rot(x, z, -sw * 0.5);
+            const y = u[1] * L * 0.5;
+            return addv(base, addv(addv(scl(wd, x), scl(dir, y)), scl(tn, z)));
+          }),
+          bc,
+          MAT.finish,
+          tintOf(50 + ri),
+        );
+      }
+      if (c.flag > 0) {
+        const dir = nrm([0.12, 1, -0.08]);
+        const top = addv(kp, scl(dir, 0.52));
+        mb.stroke(addv(kp, scl(dir, -0.04)), top, [0, 0, 1], 0.008, 0.008, [0.86, 0.87, 0.9], MAT.metal);
+        const tip = addv(top, scl(dir, 0.012));
+        octa(mb, (x, y, z) => [tip[0] + x * 0.018, tip[1] + y * 0.018, tip[2] + z * 0.018], [0.86, 0.87, 0.9], MAT.metal);
+        flagCloth(mb, top, pose.phase * 6, c.flag === 2);
+      }
+    }
+
+    // ---- tail beads, feet, thinking bits
+    const tail = tailBeads(blobs, k, pose);
+    tail.forEach(([p, r], ti) => mb.faces(mapFaces(unitFaces(0.26), (u) => [p[0] + u[0] * r, p[1] + u[1] * r, p[2] + u[2] * r]), acc, MAT.finish, tintOf(60 + ti)));
+    const wag = pose.props.wag ?? 0;
     const hop = Math.max(0, wag - 1) * 0.03;
-    set(31, hop * Math.max(0, Math.sin(pose.phase * 7)), hop * Math.max(0, Math.sin(pose.phase * 7 + Math.PI)), pose.phase * 6, S.feetZ);
+    for (const side of [-1, 1]) {
+      const lift = hop * Math.max(0, Math.sin(pose.phase * 7 + (side > 0 ? Math.PI : 0)));
+      const fp: Vec3 = [0.14 * side, 0.045 + lift, S.feetZ];
+      mb.faces(mapFaces(unitFaces(0.1), (u) => [fp[0] + u[0] * 0.07, fp[1] + u[1] * 0.042, fp[2] + u[2] * 0.085]), acc, MAT.finish, tintOf(70 + side));
+    }
+    const bits = pose.props.bits ?? 0;
+    if (bits > 0.02) {
+      for (let bi = 0; bi < 3; bi++) {
+        const an = pose.phase * 2.4 + bi * 2.094;
+        const p: Vec3 = [fc[0] + Math.cos(an) * 0.16, fc[1] + fr[1] + 0.16 + 0.03 * Math.sin(an * 2 + bi), fc[2] + Math.sin(an) * 0.16];
+        const R = (0.03 + 0.008 * bi) * bits;
+        octa(mb, (x, y, z) => [p[0] + x * R, p[1] + y * R, p[2] + z * R], [1, 0.72, 0.2], MAT.gold);
+      }
+    }
+
+    f.mesh = {
+      data: mb.data,
+      count: mb.count,
+      wob: [pose.wobble * 0.7, pose.wobblePhase],
+      poke: [pose.poke[0], pose.poke[1], pose.poke[2], pose.pokeAmp],
+      finish: fin,
+      blush: Math.min(1, c.blush + face.cheeks * 0.4),
+      cheeks: [addv(eL, [-0.045, -0.06, 0]), addv(eR, [0.045, -0.06, 0])],
+    };
   },
+};
+
+// ------------------------------------------------------------- mesh helpers
+const builders = new WeakMap<CharFrame, MeshBuilder>();
+const builderFor = (f: CharFrame): MeshBuilder => {
+  let b = builders.get(f);
+  if (!b) builders.set(f, (b = new MeshBuilder()));
+  return b;
+};
+
+/** unit faceted ellipsoid (inradius 1) for a cap lift k, cached */
+const unitCache = new Map<number, Vec3[][]>();
+const unitFaces = (k: number): Vec3[][] => {
+  const key = Math.round(k * 1000) / 1000;
+  let fs = unitCache.get(key);
+  if (!fs) {
+    fs = polyhedron([...PF.map((n) => ({ n, d: 1 })), ...PV.map((n) => ({ n, d: 1 + key }))]);
+    if (unitCache.size > 64) unitCache.clear();
+    unitCache.set(key, fs);
+  }
+  return fs;
+};
+
+const rot = (x: number, y: number, a: number): [number, number] => {
+  const c = Math.cos(a), s = Math.sin(a);
+  return [c * x - s * y, s * x + c * y];
+};
+const lerpV = (a: Vec3, b: Vec3, t: number): Vec3 => [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)];
+
+/** a blob's faces in character space (inverse of the shader's blobSpace), grown by off */
+const blobFaces = (b: Blob, k: number, off: number): Vec3[][] =>
+  mapFaces(unitFaces(k), (u) => {
+    let x = u[0] * (b[4] + off), y = u[1] * (b[5] + off), z = u[2] * (b[6] + off);
+    [y, z] = rot(y, z, -b[7]);
+    [x, z] = rot(x, z, -b[3]);
+    return [b[0] + x, b[1] + y, b[2] + z];
+  });
+
+const frameOn = (n: Vec3) => {
+  const T = nrm(cross([0, 1, 0], n));
+  return { T, B: cross(n, T) };
+};
+
+/** octahedron through a mapping of its six unit vertices */
+const OCT: Vec3[] = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];
+const octa = (mb: MeshBuilder, at: (x: number, y: number, z: number) => Vec3, col: Vec3, mat: number) => {
+  const v = OCT.map((p) => at(p[0], p[1], p[2]));
+  for (const x of [0, 1]) for (const y of [2, 3]) for (const z of [4, 5]) mb.tri(v[x], v[y], v[z], col, mat);
+};
+
+const box = (mb: MeshBuilder, c: Vec3, h: Vec3, T: Vec3, B: Vec3, N: Vec3, col: Vec3, mat: number) => {
+  const p = (sx: number, sy: number, sz: number) => addv(c, addv(addv(scl(T, sx * h[0]), scl(B, sy * h[1])), scl(N, sz * h[2])));
+  const q = [p(-1, -1, -1), p(1, -1, -1), p(1, 1, -1), p(-1, 1, -1), p(-1, -1, 1), p(1, -1, 1), p(1, 1, 1), p(-1, 1, 1)];
+  for (const f of [[0, 1, 2, 3], [4, 5, 6, 7], [0, 1, 5, 4], [2, 3, 7, 6], [1, 2, 6, 5], [0, 3, 7, 4]]) mb.poly(f.map((i) => q[i]), col, mat);
+};
+
+/** low-poly arc of stroke segments */
+const arc = (mb: MeshBuilder, at: (th: number) => Vec3, a0: number, a1: number, n: number, up: Vec3, w: number, col: Vec3) => {
+  for (let i = 0; i < n; i++) {
+    const t0 = a0 + ((a1 - a0) * i) / n, t1 = a0 + ((a1 - a0) * (i + 1)) / n;
+    mb.stroke(at(t0), at(t1 + (t1 - t0) * 0.15), up, w, w * 0.7, col, MAT.thread);
+  }
+};
+
+const PRIDE: Vec3[] = [[0.89, 0.02, 0.02], [1, 0.35, 0], [1, 0.85, 0], [0, 0.5, 0.15], [0, 0.2, 0.75], [0.45, 0.05, 0.55]];
+/** paper flag: 6 rows (one per pride band) with zig-zag folds that travel along the cloth */
+const flagCloth = (mb: MeshBuilder, top: Vec3, phase: number, brand: boolean) => {
+  const NU = 16, NV = 6, W = 0.3, H = 0.19;
+  const P = (iu: number, iv: number): Vec3 => {
+    const u = (iu / NU) * W, v = (iv / NV) * H, uu = u / W;
+    const sm = Math.min(1, uu / 0.3), ss = sm * sm * (3 - 2 * sm);
+    const fr = uu * 2.5 - phase * 0.25;
+    const fold = 0.022 * (Math.abs(fr - Math.floor(fr) - 0.5) * 2 - 0.5) * ss;
+    return [top[0] + u, top[1] - v, top[2] - fold];
+  };
+  for (let iv = 0; iv < NV; iv++)
+    for (let iu = 0; iu < NU; iu++) {
+      const q = [P(iu, iv), P(iu + 1, iv), P(iu + 1, iv + 1), P(iu, iv + 1)];
+      if (brand) {
+        const uv = (a: number, b: number) => [a / NU, 1 - b / NV] as const;
+        const corners: Array<[Vec3, readonly [number, number]]> = [[q[0], uv(iu, iv)], [q[1], uv(iu + 1, iv)], [q[2], uv(iu + 1, iv + 1)], [q[3], uv(iu, iv + 1)]];
+        for (const [i0, i1, i2] of [[0, 1, 2], [0, 2, 3]]) for (const i of [i0, i1, i2]) mb.vert(corners[i][0], [1, 1, 1], MAT.brandFlag, corners[i][1][0], corners[i][1][1]);
+      } else {
+        const t = 0.94 + 0.12 * faceHash(iu + iv * NU, 7);
+        const cc = PRIDE[iv];
+        mb.poly(q, [cc[0] * t, cc[1] * t, cc[2] * t], MAT.cloth);
+      }
+    }
+};
+
+/** tail: three beads trailing from the back, swaying with mood */
+const tailBeads = (blobs: Blob[], k: number, pose: Pose): Array<[Vec3, number]> => {
+  const [root] = anchor(blobs, k, [0, 0.32, 0], [0.0, -0.25, -1]);
+  const wag = pose.props.wag ?? 0;
+  const curl = pose.props.curl ?? 0;
+  const amp = (0.25 + 0.4 * pose.excite + 0.5 * pose.pet + 0.4 * wag) * (1 - 0.6 * curl);
+  const freq = 1.6 + 2.5 * wag + 2.0 * pose.pet;
+  let p: Vec3 = [root[0], root[1], root[2] + 0.02];
+  let yaw = 0, pitch = -0.4 * (1 - curl) - 0.9 * curl;
+  const radii = [0.055, 0.045, 0.035];
+  const out: Array<[Vec3, number]> = [];
+  for (let i = 0; i < 3; i++) {
+    yaw += amp * Math.sin(pose.phase * freq - i * 0.8) * (0.6 + 0.3 * i) - pose.yaw * 0.1 + curl * 0.9;
+    pitch += 0.35 * (1 - curl);
+    const len = 0.075 + 0.01 * i;
+    p = [p[0] + Math.sin(yaw) * Math.cos(pitch) * len, p[1] + Math.sin(pitch) * len * 0.6, p[2] - Math.cos(yaw) * Math.cos(pitch) * len];
+    out.push([p, radii[i]]);
+  }
+  return out;
 };

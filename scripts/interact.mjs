@@ -127,6 +127,21 @@ if (family === 'dots') {
   await page.click('.ctl[data-key="shape"] button[data-v="5"]');
   const sh = await page.evaluate(() => { const s = window.__app.liveStages[0]; return s.avatars[s.selected].config.shape; });
   check('silhouette picker morphs the bot', sh === 5, `shape=${sh}`);
+} else if (family === 'doodle') {
+  await page.click('.ctl[data-key="style"] button[data-v="riso"]');
+  await page.click('.ctl[data-key="character"] button[data-v="4"]');
+  await settle(2);
+  const d = await page.evaluate(() => {
+    const s = window.__app.liveStages[0];
+    const c = s.avatars[s.selected].config;
+    const cv = s.canvas2d;
+    // the 2D canvas really has ink on it
+    const px = cv.getContext('2d').getImageData(0, 0, cv.width, cv.height).data;
+    let inked = 0;
+    for (let i = 3; i < px.length; i += 4 * 97) if (px[i] > 0) inked++;
+    return { style: c.style, character: c.character, inked };
+  });
+  check('style and character chips redraw the 2D character', d.style === 'riso' && d.character === 4 && d.inked > 20, JSON.stringify(d));
 } else if (family === 'poly') {
   const m = await startMorph(3);
   await settle(12);

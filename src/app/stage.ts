@@ -1,7 +1,7 @@
 import { Avatar } from '../avatar/avatar';
 import { add, clamp, cross, lerp, normalize, quatEuler, quatRotate, sub, dot, type Vec3 } from '../engine/math';
 import { damp } from '../engine/spring';
-import type { Camera, Renderer, View } from '../engine/renderer';
+import type { Camera, CharFrame, Renderer, View } from '../engine/renderer';
 import type { BaseConfig, EmoteKind, FamilyDef } from '../families/types';
 import type { Composition } from '../families/compose';
 import type { Overlay, Tag } from './overlay';
@@ -46,6 +46,9 @@ export class Stage<C extends BaseConfig = BaseConfig> {
   private tagAlpha = 0;
   private shown: Avatar<C> | null = null;
   private shownAt = -Infinity;
+  // 2D families draw into their own canvas inside the stage
+  readonly canvas2d: HTMLCanvasElement | null = null;
+  private layers2d = new Map<string, CanvasRenderingContext2D>();
   private parallax: [number, number] = [0, 0];
   private comp: Composition | null = null;
   private placed = false;
@@ -60,6 +63,11 @@ export class Stage<C extends BaseConfig = BaseConfig> {
   ) {
     this.setConfigs(configs);
     this.bind();
+    if (family.draw2d) {
+      this.canvas2d = document.createElement('canvas');
+      this.canvas2d.className = 'stage2d';
+      el.prepend(this.canvas2d);
+    }
   }
 
   setConfigs(configs: C[]): void {
@@ -341,6 +349,48 @@ export class Stage<C extends BaseConfig = BaseConfig> {
       chars: a ? [a.build()] : [],
       anchors: this.family.anchors,
     };
+    if (this.canvas2d && a) this.draw2d(a, this.view.chars[0], t);
+  }
+
+  /** Draw a 2D family's character at the camera-projected spot, in character units. */
+  private draw2d(a: Avatar<C>, f: CharFrame, t: number): void {
+    const cv = this.canvas2d!;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const w = Math.max(1, Math.round(this.rect.width * dpr)), h = Math.max(1, Math.round(this.rect.height * dpr));
+    if (cv.width !== w || cv.height !== h) {
+      cv.width = w;
+      cv.height = h;
+    }
+    const ctx = cv.getContext('2d');
+    if (!ctx) return;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+    const feet = this.project(f.pos);
+    const up = this.project([f.pos[0], f.pos[1] + f.scale, f.pos[2]]);
+    if (!feet || !up) return;
+    const ppu = Math.hypot(up.x - feet.x, up.y - feet.y) * dpr;
+    ctx.setTransform(ppu, 0, 0, -ppu, (feet.x - this.rect.left) * dpr, (feet.y - this.rect.top) * dpr);
+    // tilt about the middle of the body, squash and stretch about the feet
+    const roll = (a.home.roll ?? 0) + a.pose.roll;
+    ctx.translate(0, 0.45);
+    ctx.rotate(roll);
+    ctx.translate(0, -0.45);
+    ctx.scale(f.squash[0], f.squash[1]);
+    const canvas = (id: string, cw: number, ch: number) => {
+      let c = this.layers2d.get(id);
+      if (!c) {
+        c = document.createElement('canvas').getContext('2d')!;
+        this.layers2d.set(id, c);
+      }
+      if (c.canvas.width !== cw || c.canvas.height !== ch) {
+        c.canvas.width = cw;
+        c.canvas.height = ch;
+      }
+      c.setTransform(1, 0, 0, 1, 0, 0);
+      c.clearRect(0, 0, cw, ch);
+      return c;
+    };
+    this.family.draw2d!(ctx, a.config, a.pose, a.face, { t, px: 1 / ppu, size: [w, h], canvas });
   }
 
   /** screen position of an avatar's head (tests, tooling) */

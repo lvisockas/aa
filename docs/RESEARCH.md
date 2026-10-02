@@ -96,6 +96,17 @@ headband placement interpret the text description rather than copy the artwork. 
 palette is in the spirit of the RebelMouse site; exact brand colour values were not verified. The mark on
 the brand flag is an original tapered-snout mouse head, not a copy of any existing logo.
 
+### 1.7 Doodles · five 2D art styles (original)
+
+Five 2D characters, each in its own simple art style, built from a handful of shapes and drawn by
+interchangeable style renderers: Mochi in **flat vector** (bold fills, a crescent of shade), Scribble in
+**ink doodle** (marker fill off the line, hand-drawn ink that "boils" eight times a second, hatching),
+Bit in **pixel art** (rasterised to a coarse grid, snapped to its own palette, one-pixel outline), Fern in
+**paper cut-out** (scissor-cut edges, a hair of rotation, drop shadows, paper fibres) and Ribbit in
+**risograph** (two spot inks overprinted with multiply, halftone shading, misregistration, speckle). Any
+character can wear any style, and they share the 3D families' brain: eyes follow the cursor, blinks,
+squash and hop, boops, states and expressions.
+
 ### 1.6 Polydots · a low-poly Dots × RebelMouse mash-up (original)
 
 A fifth family answers "what if a Dot were a Rebel": Dots silhouettes (bean, cloud, pear, heart, round,
@@ -108,6 +119,9 @@ drop) with the mouse's ears, tail, nose, whiskers and bandana, rendered as **gen
   icosahedron. Because the distance field is a max of planes, the silhouette is polygonal and the
   finite-difference normals are flat per face with a crisp bevel at edges. Shapes morph by interpolating
   the blob parameters, so a bean becomes a heart through intermediate polyhedra.
+* **Rasterised, not ray-marched** (see 3.3): `pack()` emits flat-shaded triangles every frame (the faceted
+  polyhedra come from clipping the plane set; the bandana is the body grown a few millimetres and clipped
+  to a band), and normals come from screen-space derivatives so every triangle is exactly flat.
 * **Anchoring without a GPU pass.** The TypeScript side mirrors the facet SDF and sphere-traces from the
   face centre to find where eyes, nose, ears and the tail root land on the actual facets, with the facet
   normal from a numeric gradient. Eyes are small octahedral gems that slide across the face with the
@@ -167,6 +181,27 @@ The obvious move is three.js. The question was whether it's the *right* one for 
 
 The costs are real. Per-pixel work grows with scene complexity, compile times grow with shader size, and
 picking and anchoring need care. The architecture below exists to manage them.
+
+### 3.3 Where ray marching was the wrong tool: a hybrid renderer
+
+The Polydots were first ray-marched too, and on a real laptop GPU they ran at 16 fps even after the
+adaptive system had dropped to the lowest tier at 55% resolution. A faceted body as a distance field costs
+32 plane tests per piece per march step (about 16 pieces, ~100 steps per pixel, plus shadow rays), all
+to draw what is really ~1,500 flat triangles. Rasterisation draws those in well under a millisecond.
+
+So the renderer is now a hybrid, and each family uses the technique that fits it:
+
+| Family | Technique | Why |
+|---|---|---|
+| Dots, Grok Bot, Muse, Rebels | SDF ray marching | soft blends, live morphs, dents where you click, volumetric fur |
+| Polydots | triangle rasterisation, 4x MSAA | it is polygons; the mesh is rebuilt on the CPU each frame from the same parameters |
+| Doodles | Canvas2D | flat 2D art styles need paths, strokes, patterns and blend modes, not 3D |
+
+All three share one canvas compositor, the same camera, lights and tone mapping (the lighting code
+lives in one `lighting.glsl` used by both GPU paths), the same picking API (exact SDF picking, a CPU
+ray-triangle test for meshes, a bounding test for 2D) and the same avatar brain. A mesh library such as
+three.js was not needed for this: the mesh path is ~250 lines inside the existing renderer, and a second
+engine would have meant a second WebGL context or shared state, a second lighting model, and ~170 KB.
 
 ---
 
@@ -260,13 +295,14 @@ Overlay (2D canvas): emotes and name tags, projected from 3D
   packs finite parameters and survives boop, hold, pet and trick without NaNs.
 * `npm run interact` drives headless Chromium: gaze follows the pointer left and right, a click GPU-picks
   and selects the right avatar and dents it, the inspector follows, and the state bar works. This is run
-  for all five families, plus family-specific checks (shape morphs, accessories, species presets, the
-  aimed megaphone, faceted-body morphs).
+  for all six families, plus family-specific checks (shape morphs, accessories, species presets, the
+  aimed megaphone, faceted-body morphs, 2D style switching).
 * `npm run shots` takes screenshots of any route and size in software GL, with a GPU sync before capture.
 * `npm run bench` reports steady-state frame cost per family in software GL (480×300, low quality):
-  Grok ~190 ms, Polydots ~90 ms, Dots and Muse ~320 ms, Rebels ~400 ms per frame. Fur integration and
-  the Rebels' many parts dominate; the faceted Polydots are the cheapest field. On a GPU the same work is
-  two to three orders of magnitude faster, which is what the adaptive resolution and quality tiers manage.
+  Grok ~200 ms, Dots and Muse ~340 ms, Rebels ~440 ms per frame for the ray-marched families, against
+  ~19 ms for the rasterised Polydots (down from ~85 ms when they were ray-marched; most of what is left is
+  fixed per-frame overhead). On a GPU the same work is two to three orders of magnitude faster, which is
+  what the adaptive resolution and quality tiers manage.
 
 ## 6. Limitations and next steps
 

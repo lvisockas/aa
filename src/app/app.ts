@@ -5,6 +5,7 @@ import { grok } from '../families/grok';
 import { muse } from '../families/muse';
 import { rebel } from '../families/rebel';
 import { poly } from '../families/poly';
+import { doodle } from '../families/doodle';
 import type { BaseConfig, FamilyDef } from '../families/types';
 import { icons } from '../ui/icons';
 import { Inspector } from '../ui/inspector';
@@ -19,10 +20,10 @@ type Route = 'home' | FamilyId;
 declare const __SANDBOXED__: boolean;
 type AnyFamily = FamilyDef<any>;
 
-export const FAMILIES: Record<FamilyId, AnyFamily> = { dots, grok, muse, rebel, poly };
-const ORDER: FamilyId[] = ['dots', 'grok', 'muse', 'rebel', 'poly'];
+export const FAMILIES: Record<FamilyId, AnyFamily> = { dots, grok, muse, rebel, poly, doodle };
+const ORDER: FamilyId[] = ['dots', 'grok', 'muse', 'rebel', 'poly', 'doodle'];
 /** each view shows one character: the family's lead on the overview, and the studio opens on it too */
-const LEAD: Record<FamilyId, number> = { dots: 4, grok: 0, muse: 6, rebel: 0, poly: 0 };
+const LEAD: Record<FamilyId, number> = { dots: 4, grok: 0, muse: 6, rebel: 0, poly: 0, doodle: 0 };
 
 /** Scripted task runs that showcase each family's motion-based state language. */
 const DEMO: Record<FamilyId, Array<[string, number]>> = {
@@ -32,6 +33,7 @@ const DEMO: Record<FamilyId, Array<[string, number]>> = {
   // RebelMouse's agentic CMS pitch: it plans, creates, optimizes and grows
   rebel: [['planning', 2.4], ['creating', 3.2], ['optimizing', 2.8], ['publishing', 2.8], ['growing', 2.6], ['idle', 0]],
   poly: [['listening', 1.8], ['thinking', 2.4], ['working', 3.0], ['awaiting', 2.4], ['complete', 2.6], ['idle', 0]],
+  doodle: [['listening', 1.8], ['thinking', 2.4], ['working', 3.0], ['speaking', 2.4], ['happy', 2.6], ['idle', 0]],
 };
 
 const STORE = 'cute-agents:v1:';
@@ -115,7 +117,10 @@ export class App {
     window.addEventListener('hashchange', () => this.go(this.parseRoute()));
     this.go(this.parseRoute());
     // compile every family up-front so tab switches are instant
-    for (const id of ORDER) this.renderer.load(id, FAMILIES[id].shader).then(() => this.markReady(), (e) => this.fatal(e));
+    for (const id of ORDER) {
+      if (FAMILIES[id].draw2d) continue;   // 2D families need no GPU program
+      this.renderer.load(id, FAMILIES[id].shader, FAMILIES[id].raster).then(() => this.markReady(), (e) => this.fatal(e));
+    }
     requestAnimationFrame((t) => this.frame(t));
     // test / debugging hook
     (window as unknown as { __app: App }).__app = this;
@@ -140,6 +145,7 @@ export class App {
           <button class="tab" role="tab" data-route="muse">Muse<small>Meta</small></button>
           <button class="tab" role="tab" data-route="rebel">Rebels<small>RebelMouse</small></button>
           <button class="tab" role="tab" data-route="poly"><span class="long">Polydots</span><span class="short">Poly</span><small>mash-up</small></button>
+          <button class="tab" role="tab" data-route="doodle"><span class="long">Doodles</span><span class="short">2D</span><small>2D</small></button>
         </nav>
         <div class="top-actions">
           <div class="menu" id="settings">
@@ -256,7 +262,7 @@ export class App {
 
   private markReady(): void {
     for (const s of this.stages) {
-      if (s.ready || !this.renderer.isReady(s.family.id)) continue;
+      if (s.ready || !(s.family.draw2d || this.renderer.isReady(s.family.id))) continue;
       s.ready = true;
       const l = s.el.querySelector<HTMLElement>('.stage-loading');
       if (l) {
@@ -275,7 +281,7 @@ export class App {
       <section class="overview">
         <div class="hero">
           <h1>Why AI agents are getting cute</h1>
-          <p>OpenAI Dots, Grok Bot, Meta Muse and the RebelMouse crew, rebuilt as live 3D characters, plus a low-poly Dots × RebelMouse mash-up. Move your cursor and they'll watch you. Click to boop, hold to squish, drag to pet.</p>
+          <p>OpenAI Dots, Grok Bot, Meta Muse and the RebelMouse crew, rebuilt as live 3D characters, plus a low-poly Dots × RebelMouse mash-up and five 2D doodles. Move your cursor and they'll watch you. Click to boop, hold to squish, drag to pet.</p>
         </div>
         <div class="cards">
           ${ORDER.map((id) => {
@@ -291,7 +297,7 @@ export class App {
             </article>`;
           }).join('')}
         </div>
-        <p class="foot-note">Rendered live by a custom signed-distance-field ray marcher on WebGL2. No three.js, no meshes, no downloaded assets.</p>
+        <p class="foot-note">Rendered live in your browser: a WebGL2 ray marcher for the soft characters, a mesh rasteriser for the low-poly ones, Canvas2D for the doodles. No three.js, no downloaded assets.</p>
       </section>`;
     this.main.querySelectorAll<HTMLButtonElement>('[data-open]').forEach((b) =>
       b.addEventListener('click', () => (location.hash = `#${b.dataset.open}`)),
@@ -519,7 +525,7 @@ export class App {
     // hosted viewers block downloads: the button is not rendered there and this branch is compiled out
     if (!__SANDBOXED__) {
       const name = String(this.current?.config.name ?? 'avatar').toLowerCase().replace(/\W+/g, '-');
-      downloadStagePNG(this.renderer, view, s.family.backgroundSolid ?? s.family.background, `${s.family.id}-${name}.png`);
+      downloadStagePNG(this.renderer, view, s.family.backgroundSolid ?? s.family.background, `${s.family.id}-${name}.png`, s.canvas2d);
       this.toast('Snapshot saved');
     }
   }

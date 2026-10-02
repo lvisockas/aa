@@ -43,8 +43,8 @@ void main() {
  * Compiles and links a program. Resolves once linking is finished; when the
  * parallel-compile extension is available this never blocks the main thread.
  */
-export const createProgram = (gl: WebGL2RenderingContext, fragSrc: string, label: string): Promise<Program> => {
-  const vs = compileShader(gl, gl.VERTEX_SHADER, VERT);
+export const createProgram = (gl: WebGL2RenderingContext, fragSrc: string, label: string, vertSrc = VERT): Promise<Program> => {
+  const vs = compileShader(gl, gl.VERTEX_SHADER, vertSrc);
   const fs = compileShader(gl, gl.FRAGMENT_SHADER, fragSrc);
   const prog = gl.createProgram();
   if (!prog) throw new Error('createProgram failed');
@@ -56,7 +56,7 @@ export const createProgram = (gl: WebGL2RenderingContext, fragSrc: string, label
   const finish = (): Program => {
     if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
       const fsLog = gl.getShaderInfoLog(fs) || '';
-      const vsLog = gl.getShaderInfoLog(vs) || '';
+      const vsLog = gl.getShaderInfoLog(vs) ? formatLog(gl.getShaderInfoLog(vs)!, vertSrc) : '';
       const progLog = gl.getProgramInfoLog(prog) || '';
       throw new Error(
         `[${label}] shader link failed\n${fsLog ? formatLog(fsLog, fragSrc) : ''}${vsLog}${progLog}`,

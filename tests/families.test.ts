@@ -4,6 +4,9 @@ import { Avatar } from '../src/avatar/avatar';
 import { NP } from '../src/engine/renderer';
 import { rng } from '../src/engine/math';
 import { rebel } from '../src/families/rebel';
+import { poly } from '../src/families/poly';
+import { doodle, doodleItems } from '../src/families/doodle';
+import { VERT_FLOATS } from '../src/engine/mesh';
 import { FAMILY_LIST } from './helpers';
 
 test('every schema control maps to a real config key', () => {
@@ -76,4 +79,56 @@ test('species presets and prop-aware arm poses (family hooks)', () => {
   a.setState('publishing', 0);
   for (let i = 0; i < 180; i++) a.update(1 / 60, { t: i / 60, pointer: null, pointerIdle: 99, camera: [0, 1, 6], neighbors: [a], reducedMotion: false });
   assert.ok(a.pose.arms.rFwd < 0.1 && a.pose.arms.rRaise > 2, `arms ${JSON.stringify(a.pose.arms)}`);
+});
+
+/** a do-nothing 2D context: enough surface for every style to run headless */
+const mockCtx = (): CanvasRenderingContext2D => {
+  const target: Record<string, unknown> = { canvas: { width: 320, height: 200 } };
+  return new Proxy(target, {
+    get(t, k) {
+      if (typeof k === 'string' && k in t) return t[k];
+      if (k === 'getImageData' || k === 'createImageData')
+        return (_x: number, _y: number, w = 4, h = 4) => ({ data: new Uint8ClampedArray(Math.max(1, w * h) * 4), width: w, height: h });
+      if (k === 'getTransform') return () => ({ a: 1, b: 0, c: 0, d: 1, e: 0, f: 0 });
+      if (k === 'createPattern') return () => null;
+      return () => undefined;
+    },
+    set(t, k, v) {
+      t[k as string] = v;
+      return true;
+    },
+  }) as unknown as CanvasRenderingContext2D;
+};
+
+test('every doodle character draws in every style, in every state, with finite geometry', () => {
+  const ctx = mockCtx();
+  const env = { t: 1.2, px: 0.004, size: [320, 200] as [number, number], canvas: () => mockCtx() };
+  for (let ch = 0; ch < 5; ch++)
+    for (const style of ['flat', 'ink', 'pixel', 'paper', 'riso'] as const) {
+      const a = new Avatar(doodle, { ...doodle.roster()[0], character: ch, style }, () => {}, 1);
+      for (const state of Object.keys(doodle.states)) {
+        a.setState(state, 0);
+        for (let i = 0; i < 3; i++) a.update(1 / 30, { t: i / 30, pointer: [0.4, 1, 1], pointerIdle: 0, camera: [0, 1, 6], neighbors: [a], reducedMotion: false });
+        const list = doodleItems(a.config, a.pose, a.face, 1);
+        assert.ok(list.length > 5, `doodle ${ch}: too few items`);
+        for (const it of list) {
+          const pts = it.k === 'dot' ? [[it.x, it.y]] : it.pts;
+          for (const p of pts) assert.ok(Number.isFinite(p[0]) && Number.isFinite(p[1]), `doodle ${ch}/${state}: NaN point`);
+        }
+        doodle.draw2d!(ctx, a.config, a.pose, a.face, env);
+      }
+    }
+});
+
+test('polydots build closed, finite triangle meshes for every preset and state', () => {
+  for (const cfg of poly.roster()) {
+    const a = new Avatar(poly, cfg, () => {}, 1);
+    for (const state of Object.keys(poly.states)) {
+      a.setState(state, 0);
+      for (let i = 0; i < 3; i++) a.update(1 / 30, { t: i / 30, pointer: [0.4, 1, 1], pointerIdle: 0, camera: [0, 1, 6], neighbors: [a], reducedMotion: false });
+      const m = a.build().mesh!;
+      assert.ok(m && m.count > 300 && m.count % 3 === 0, `${cfg.name}/${state}: ${m?.count} vertices`);
+      for (let i = 0; i < m.count * VERT_FLOATS; i++) assert.ok(Number.isFinite(m.data[i]), `${cfg.name}/${state}: NaN vertex data`);
+    }
+  }
 });
