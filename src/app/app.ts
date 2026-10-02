@@ -118,7 +118,7 @@ export class App {
       <header class="top">
         <a class="brand" href="#/">${icons.spark}<span>Cute Agents</span></a>
         <nav class="tabs" role="tablist" aria-label="Families">
-          <button class="tab" role="tab" data-route="home">Overview</button>
+          <button class="tab" role="tab" data-route="home"><span class="long">Overview</span><span class="short">All</span></button>
           <button class="tab" role="tab" data-route="dots">Dots<small>OpenAI</small></button>
           <button class="tab" role="tab" data-route="grok">Grok Bot<small>xAI</small></button>
           <button class="tab" role="tab" data-route="muse">Muse<small>Meta</small></button>
@@ -315,9 +315,18 @@ export class App {
         <aside class="inspector" aria-label="Avatar settings"></aside>
       </section>`;
     const el = this.main.querySelector<HTMLElement>('.stage')!;
+    const head = el.querySelector<HTMLElement>('.stage-head')!;
+    const bottom = el.querySelector<HTMLElement>('.stage-bottom')!;
+    // frame the cast in the band between the title block and the bottom bar
+    const insets = (): [number, number] => {
+      const r = el.getBoundingClientRect();
+      const h = head.getBoundingClientRect();
+      const b = bottom.getBoundingClientRect();
+      return [Math.max(0, h.bottom - r.top + 10), Math.max(0, r.bottom - b.top + 6)];
+    };
     const stage = new Stage(el, f, this.configs[id], this.renderer, this.overlay, {
       compact: false,
-      insets: [150, 104],
+      insets,
       tags: true,
       slot: 0,
       onSelect: (i) => this.select(i),

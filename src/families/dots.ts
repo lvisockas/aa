@@ -333,7 +333,7 @@ export const dots: FamilyDef<DotsConfig> = {
     set(0, from, c.shape, m < 1 ? ease : 0, c.width);
     const col = hexToLinear(c.color);
     set(1, col[0], col[1], col[2], c.furLength);
-    set(2, 1.15 * c.fuzz, 4.6, 0.22, 0.9);
+    set(2, 1.2 * c.fuzz, 6.2, 0.1, 0.9);
     const eyeKind = face.l.kind;
     set(3, eyeKind, c.eyeSize * face.l.w, c.eyeSpacing, c.eyeHeight);
     set(4, pose.blink, face.l.lid, pose.lookX, pose.lookY);

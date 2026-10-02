@@ -9,7 +9,7 @@ import type { Overlay, Tag } from './overlay';
 export interface StageOptions {
   compact: boolean;
   /** pixels covered by stage UI at the top / bottom; the cast is framed in between */
-  insets?: [number, number];
+  insets?: [number, number] | (() => [number, number]);
   /** show a name tag over the selected avatar */
   tags: boolean;
   slot: number;
@@ -75,7 +75,8 @@ export class Stage<C extends BaseConfig = BaseConfig> {
   }
 
   private insets(): [number, number] {
-    const [top, bottom] = this.opts.insets ?? [0, 0];
+    const raw = this.opts.insets;
+    const [top, bottom] = typeof raw === 'function' ? raw() : raw ?? [0, 0];
     // never let the UI eat more than ~45% of a small stage
     const k = Math.min(1, (this.rect.height * 0.45) / Math.max(top + bottom, 1));
     return [top * k, bottom * k];

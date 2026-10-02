@@ -407,7 +407,7 @@ export const muse: FamilyDef<MuseConfig> = {
     const fc = lin(c.furColor);
     set(0, fc[0], fc[1], fc[2], c.furLength);
     const longFur = c.furLength > 0.06;
-    set(1, (longFur ? 1.35 : 1.1) * c.fluff, longFur ? 2.4 : 5.2, longFur ? 0.75 : 0.16, longFur ? 0.05 : 0.004);
+    set(1, (longFur ? 1.6 : 1.15) * c.fluff, longFur ? 1.9 : 5.6, longFur ? 0.55 : 0.12, longFur ? 0.065 : 0.004);
     set(2, c.chub, c.headSize, c.species, c.ears);
     const hq = quatEuler(pose.headYaw, pose.headPitch, pose.headRoll);
     set(3, hq[0], hq[1], hq[2], hq[3]);

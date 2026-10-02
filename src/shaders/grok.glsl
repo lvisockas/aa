@@ -104,7 +104,7 @@ float bodyDist(Char c, vec3 q) {
   if (c.sh.w > 0.0 && d2 < -H) {
     float inner = -d2;
     if (abs(q.z) < H + c.sh.w + 0.12) {
-      const float r = 0.075;
+      const float r = 0.11;
       inner = -0.25 * (silhouette(c, p + vec2(r, 0.0)) + silhouette(c, p - vec2(r, 0.0)) +
                        silhouette(c, p + vec2(0.0, r)) + silhouette(c, p - vec2(0.0, r)));
     }

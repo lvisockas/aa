@@ -8,8 +8,10 @@
     "dev": "node scripts/build.mjs --serve",
     "build": "node scripts/build.mjs",
     "typecheck": "tsc --noEmit",
-    "test": "node --test tests/",
-    "shots": "node scripts/shots.mjs"
+    "test": "node scripts/test.mjs",
+    "shots": "node scripts/shots.mjs",
+    "interact": "node scripts/interact.mjs",
+    "debug": "node scripts/build.mjs --debug"
   },
   "devDependencies": {
     "esbuild": "0.28.2",

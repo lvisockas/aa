@@ -79,6 +79,62 @@ await settle(2);
 const st = await page.evaluate(() => window.__app.liveStages[0].avatars[window.__app.liveStages[0].selected].state);
 check('state bar sets the selected avatar state', typeof st === 'string' && st !== 'idle', st);
 
+// 5) hold to squish, release to jump
+const holdTarget = 0;
+const hp = (await state()).avatars[holdTarget].screen;
+await page.mouse.move(hp.x, hp.y + 25);
+await page.mouse.down();
+await settle(6);
+await wait(700);
+await settle(4);
+await page.mouse.up();
+let maxHop = 0;
+for (let i = 0; i < 12; i++) {
+  await settle(1);
+  const hop = await page.evaluate((k) => window.__app.liveStages[0].avatars[k].pose.offset[1], holdTarget);
+  maxHop = Math.max(maxHop, hop);
+}
+check('hold then release makes the avatar jump', maxHop > 0.02, `max hop ${maxHop.toFixed(3)}`);
+
+// 6) family-specific settings through the inspector
+if (family === 'dots') {
+  await page.click('.ctl[data-key="shape"] button[data-v="3"]');
+  await settle(1);
+  const m = await page.evaluate(() => { const s = window.__app.liveStages[0]; const a = s.avatars[s.selected]; return { shape: a.config.shape, from: a.config._from?.shape, morph: a.pose.morph }; });
+  check('shape change morphs from the old silhouette', m.shape === 3 && m.from !== undefined && m.morph < 1, JSON.stringify(m));
+  await page.click('details[data-sec="acc"] > summary');
+  await page.click('.ctl[data-key="hat"] button[data-v="3"]');
+  const hat = await page.evaluate(() => { const s = window.__app.liveStages[0]; return s.avatars[s.selected].config.hat; });
+  check('accessory chips update the avatar', hat === 3, `hat=${hat}`);
+} else if (family === 'grok') {
+  await page.click('.ctl[data-key="material"] button[data-v="clay"]');
+  const mat = await page.evaluate(() => { const s = window.__app.liveStages[0]; return s.avatars[s.selected].config.material; });
+  check('material chips update the avatar', mat === 'clay', mat);
+  await page.click('.ctl[data-key="shape"] button[data-v="5"]');
+  const sh = await page.evaluate(() => { const s = window.__app.liveStages[0]; return s.avatars[s.selected].config.shape; });
+  check('silhouette picker morphs the bot', sh === 5, `shape=${sh}`);
+} else {
+  await page.click('.ctl[data-key="species"] button[data-v="1"]');
+  await settle(1);
+  const sp = await page.evaluate(() => { const s = window.__app.liveStages[0]; const c = s.avatars[s.selected].config; return { species: c.species, ears: c.ears }; });
+  check('species switch applies its defaults (bunny ears)', sp.species === 1 && sp.ears === 1, JSON.stringify(sp));
+}
+
+// 7) solo mode
+await page.click('[data-tool="solo"]');
+const mode = await page.evaluate(() => window.__app.liveStages[0].mode);
+check('solo toggles focus mode', mode === 'solo', mode);
+await page.click('[data-tool="solo"]');
+
+// 8) edits persist across reloads
+await page.fill('.ctl[data-key="name"] input', 'Persisto');
+await wait(200);
+await page.reload();
+for (let i = 0; i < 240 && (await frames()) < 2; i++) await wait(250);
+const names = await page.evaluate(() => window.__app.liveStages[0].avatars.map((a) => a.config.name));
+check('customisations persist across reloads', names.includes('Persisto'), names.join(', '));
+await page.evaluate(() => localStorage.clear());
+
 await page.screenshot({ path: path.join(root, `shots/interact_${family}.png`) });
 check('no page errors', errors.length === 0, errors.join(' | '));
 await browser.close();
