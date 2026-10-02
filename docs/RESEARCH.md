@@ -96,6 +96,34 @@ headband placement interpret the text description rather than copy the artwork. 
 palette is in the spirit of the RebelMouse site; exact brand colour values were not verified. The mark on
 the brand flag is an original tapered-snout mouse head, not a copy of any existing logo.
 
+### 1.10 A 2D sketchbook · Ghosts, Blobs, Cards, Moods, Bugs (original)
+
+Five more 2D families, each built from a reference sheet the user shared. The characters are original; what
+carries over is each style's rules, rebuilt procedurally in Canvas2D on the shared brain.
+
+* **Ghosts** (a 2000s TV-cartoon ghost expression sheet). A flat gumdrop body with no outline and a drippy hem,
+  huge eyes with thick black rims, heavy slanted brows, and mouths that go from a line to a shout full of teeth
+  and tongue. The style's acting lives in the body, so the top bends towards where it looks, the whole thing
+  squashes like rubber, and noodle arms with mitten hands sprout only when a state reaches out (wave, type, chin,
+  fist, cheer). Twelve expressions, plus shouting and scheming states (the latter adds a red bandana mask).
+* **Blobs** (a flat jelly-blob set). Each outline is a superellipse with separate top and bottom exponents,
+  taper, base spread, lean and a few slow lumps, so eight shapes come out of one function and can breathe,
+  dent where you click and jiggle back. Faces stay tiny and low: white eyes, maroon pupils, lids as a half-disc in
+  a darker body tone. Everything is clipped to the body, so the face slides round the edge when it spins.
+* **Cards** (a character-card set). The whole card is the character: title, colour dot, flat panel, a bald
+  monoline person and a wrapped description, with titles that shrink and descriptions that step down in size
+  to fit. Hands carry the meaning, so the family has its own arm rig (upper arm behind the shirt, forearm in
+  front, seven hand shapes) easing between gestures; archetype presets set title, text, colour, pose and decor.
+* **Moods** (a crayon emotions poster). The line is the craft: every stroke is two filled ribbons (a faint wide
+  pass and a dense core) with pressure swelling along it, ragged edges and seeded wobble, drawn into an offscreen
+  layer and rubbed out with a cached paper-grain tile. "Line boil" re-rolls wobble and grain seven times a second,
+  the way hand-drawn animation shimmers. Loop hair comes from a cursive-loop generator that runs along the edge.
+* **Bugs** (marker-and-gouache picture-book critters). Bodies are semi-opaque paint with a cached brush-grain
+  tile, pooled darker and lighter patches, darker edges and wobbly outlines; everything else is a fine black
+  liner: stick legs with feet, feelers on springs that lag behind hops, googly eyes, teeth rows, hatched or
+  striped wings. Eight body types (from jellyfish dome to caterpillar and snout beetle) take any combination of
+  legs, wings, feelers, eyes, mouths and patterns; legs scuttle and wings buzz while working.
+
 ### 1.9 Faces · Notion-style portraits
 
 Notion's avatar style, built with Buck as the "Notion Faces" maker, is a black monoline portrait on white:
@@ -238,6 +266,7 @@ So the renderer is now a hybrid, and each family uses the technique that fits it
 | Doodles | Canvas2D | flat 2D art styles need paths, strokes, patterns and blend modes, not 3D |
 | Clawd | Canvas2D, nearest-neighbour pixel sprite | the original is terminal block art; motion snaps to its pixel grid |
 | Faces | Canvas2D, monoline paths | a line-drawn portrait is strokes and flat fills; parts swap as paths |
+| Ghosts, Blobs, Cards, Moods, Bugs | Canvas2D, procedural paths plus cached texture tiles | flat fills, crayon and paint textures, text on cards: illustration, not geometry |
 
 All three share one canvas compositor, the same camera, lights and tone mapping (the lighting code
 lives in one `lighting.glsl` used by both GPU paths), the same picking API (exact SDF picking, a CPU
@@ -337,8 +366,10 @@ Overlay (2D canvas): emotes and name tags, projected from 3D
   packs finite parameters and survives boop, hold, pet and trick without NaNs.
 * `npm run interact` drives headless Chromium: gaze follows the pointer left and right, a click GPU-picks
   and selects the right avatar and dents it, the inspector follows, and the state bar works. This is run
-  for all eight families, plus family-specific checks (shape morphs, accessories, species presets, the
-  aimed megaphone, faceted-body morphs, 2D style switching, the terminal crab's states, Notion-style part swaps). A unit test
+  for all thirteen families, plus family-specific checks (shape morphs, accessories, species presets, the
+  aimed megaphone, faceted-body morphs, 2D style switching, the terminal crab's states, Notion-style part swaps, a part chip on each sketchbook family). Every 2D family also draws every
+  option of every control in every state in a unit test, and `scripts/sheet.mjs` renders a family's roster x
+  states (or expressions, or one control's options) as a contact sheet in about two seconds, no WebGL needed). A unit test
   guards against the click-then-squash bug (a quick click used to leave the hold timer running).
 * `npm run shots` takes screenshots of any route and size in software GL, with a GPU sync before capture.
 * `npm run bench` reports steady-state frame cost per family in software GL (480×300, low quality):

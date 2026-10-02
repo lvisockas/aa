@@ -243,13 +243,26 @@ interface Crayon {
   w: number;
   /** deferred paint per pass (0 halo, 1 core) when drawing onto the grain layer */
   queue: Array<Array<(ctx: CanvasRenderingContext2D) => void>> | null;
+  /** ink bounds in character units [x0, y0, x1, y1], so the grain layer only covers what was drawn */
+  box: number[] | null;
 }
+const grow = (C: Crayon, pts: Pt[], pad: number) => {
+  const b = C.box;
+  if (!b) return;
+  for (const [x, y] of pts) {
+    if (x - pad < b[0]) b[0] = x - pad;
+    if (y - pad < b[1]) b[1] = y - pad;
+    if (x + pad > b[2]) b[2] = x + pad;
+    if (y + pad > b[3]) b[3] = y + pad;
+  }
+};
 const paint = (C: Crayon, pass: number, fn: (ctx: CanvasRenderingContext2D) => void) => {
   if (C.queue) C.queue[pass].push(fn);
   else fn(C.ctx);
 };
 /** a filled polygon in crayon colour, on one pass */
-const fillPoly = (C: Crayon, pass: number, pts: Pt[], col: string, alpha: number) =>
+const fillPoly = (C: Crayon, pass: number, pts: Pt[], col: string, alpha: number) => {
+  grow(C, pts, 0.002);
   paint(C, pass, (ctx) => {
     ctx.beginPath();
     pts.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
@@ -258,6 +271,7 @@ const fillPoly = (C: Crayon, pass: number, pts: Pt[], col: string, alpha: number
     ctx.fillStyle = col;
     ctx.fill();
   });
+};
 interface StrokeOpts {
   w?: number;
   a?: number;
@@ -315,6 +329,7 @@ const stroke = (C: Crayon, pts: Pt[], seed: number, o: StrokeOpts = {}) => {
   const w = (o.w ?? 1) * C.w;
   const amp = 0.0008 + 0.0026 * r;
   const taper = o.taper ?? 1;
+  grow(C, P, w * 1.1 + amp * 2);
   const passes: Array<[number, number, number]> = [
     // [width, alpha, side offset]: a wide pass the paper tooth bites hard, and a dense core
     [1.3 + 0.3 * r, 0.75, 0.1],
@@ -358,17 +373,19 @@ const blob = (C: Crayon, x: number, y: number, rad: number, seed: number, o: { a
   });
 };
 
-/** paper tooth: a tileable 128px mask of the spots where the wax skips */
-let grainTile: HTMLCanvasElement | null | undefined;
-const grain = (): HTMLCanvasElement | null => {
-  if (grainTile !== undefined) return grainTile;
-  if (typeof document === 'undefined') return (grainTile = null);
+/** paper tooth: tileable 128px masks of the spots where the wax skips (two seeds, so the two bites differ) */
+const grainTiles: Array<HTMLCanvasElement | null | undefined> = [];
+const grain = (seed: number): HTMLCanvasElement | null => {
+  const hit = grainTiles[seed];
+  if (hit !== undefined) return hit;
+  if (typeof document === 'undefined') return (grainTiles[seed] = null);
   const S = 128;
   const cv = document.createElement('canvas');
   cv.width = cv.height = S;
   const g = cv.getContext('2d');
-  if (!g) return (grainTile = null);
+  if (!g) return (grainTiles[seed] = null);
   const im = g.createImageData(S, S);
+  const k = seed * 10;
   // tileable value noise with cells of cx by cy pixels
   const vn = (x: number, y: number, cx: number, cy: number, s: number) => {
     const nx = S / cx, ny = S / cy;
@@ -381,12 +398,14 @@ const grain = (): HTMLCanvasElement | null => {
   };
   for (let y = 0; y < S; y++)
     for (let x = 0; x < S; x++) {
-      const v = 0.34 * vn(x, y, 4, 4, 1) + 0.26 * vn(x, y, 16, 2, 2) + 0.14 * vn(x, y, 32, 32, 4) + 0.26 * h1(x + y * S, 3);
+      // streaks run along the second tile's other axis, like the paper turned for the second pass
+      const [gx, gy] = seed ? [y, x] : [x, y];
+      const v = 0.34 * vn(gx, gy, 4, 4, 1 + k) + 0.26 * vn(gx, gy, 16, 2, 2 + k) + 0.14 * vn(gx, gy, 32, 32, 4 + k) + 0.26 * h1(x + y * S, 3 + k);
       const a = Math.min(1, Math.max(0, (v - 0.47) / 0.17));
       im.data[(x + y * S) * 4 + 3] = Math.round(a * 255);
     }
   g.putImageData(im, 0, 0);
-  return (grainTile = cv);
+  return (grainTiles[seed] = cv);
 };
 
 /**
@@ -395,60 +414,71 @@ const grain = (): HTMLCanvasElement | null => {
  * drawing straight onto ctx (no grain) when there is no DOM.
  */
 type Queue = Array<Array<(ctx: CanvasRenderingContext2D) => void>>;
-const inkLayer = (ctx: CanvasRenderingContext2D, env: Draw2DEnv, rough: number, boil: number): { L: CanvasRenderingContext2D; queue: Queue | null; finish: () => void } => {
-  const direct = { L: ctx, queue: null, finish: () => {} };
+const inkLayer = (ctx: CanvasRenderingContext2D, env: Draw2DEnv, rough: number, boil: number): { queue: Queue | null; box: number[] | null; finish: () => void } => {
+  const direct = { queue: null, box: null, finish: () => {} };
   if (typeof document === 'undefined' || typeof ctx.getTransform !== 'function') return direct;
   const m = ctx.getTransform();
   if (!m || !Number.isFinite(m.a)) return direct;
-  const U0 = -0.72, U1 = 0.72, V0 = -0.2, V1 = 1.26;
-  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-  for (const [u, v] of [[U0, V0], [U1, V0], [U0, V1], [U1, V1]]) {
-    const x = m.a * u + m.c * v + m.e, y = m.b * u + m.d * v + m.f;
-    x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y);
-  }
-  const bx = Math.floor(x0), by = Math.floor(y0);
-  const w = Math.min(4096, Math.ceil((x1 - bx) / 64) * 64), h = Math.min(4096, Math.ceil((y1 - by) / 64) * 64);
-  if (!(w > 0 && h > 0)) return direct;
-  const L = env.canvas('moods-ink', w, h);
-  if (!L || typeof L.setTransform !== 'function' || !L.canvas) return direct;
-  L.setTransform(m.a, m.b, m.c, m.d, m.e - bx, m.f - by);
   const queue: Queue = [[], []];
-  const tile = grain();
-  // ~1 grain pixel per device pixel at studio size; the tooth shifts when the line boils
-  const gs = Math.max(env.px, 0.0012);
-  const bite = (alpha: number, salt: number) => {
-    if (!tile) return;
-    L.save();
-    L.globalCompositeOperation = 'destination-out';
-    L.globalAlpha = Math.min(1, alpha);
-    const p = L.createPattern(tile, 'repeat');
-    if (p) {
-      if (typeof DOMMatrix !== 'undefined') p.setTransform(new DOMMatrix().translate(h1(boil, salt) * 0.3, h1(boil, salt + 1) * 0.3).rotate(salt * 37).scale(gs, gs));
-      L.fillStyle = p;
-      L.fillRect(U0, V0, U1 - U0, V1 - V0);
-    }
-    L.restore();
-  };
+  const box = [Infinity, Infinity, -Infinity, -Infinity];
   return {
-    L,
     queue,
+    box,
     finish: () => {
+      if (!(box[2] > box[0] && box[3] > box[1])) return;
+      const [U0, V0, U1, V1] = box;
+      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+      for (const [u, v] of [[U0, V0], [U1, V0], [U0, V1], [U1, V1]]) {
+        const x = m.a * u + m.c * v + m.e, y = m.b * u + m.d * v + m.f;
+        x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y);
+      }
+      const bx = Math.floor(x0) - 1, by = Math.floor(y0) - 1;
+      const w = Math.min(4096, Math.ceil(x1 - bx) + 2), h = Math.min(4096, Math.ceil(y1 - by) + 2);
+      if (!(w > 0 && h > 0)) return;
+      // the backing canvas only grows (in 128px steps), so a moving face doesn't reallocate it every frame
+      const cw = Math.ceil(Math.max(w, layerW) / 128) * 128, ch = Math.ceil(Math.max(h, layerH) / 128) * 128;
+      layerW = cw;
+      layerH = ch;
+      const L = env.canvas('moods-ink', cw, ch);
+      if (!L || typeof L.setTransform !== 'function' || !L.canvas) return;
+      L.setTransform(m.a, m.b, m.c, m.d, m.e - bx, m.f - by);
+      // the paper tooth is bitten in device pixels with whole-pixel offsets, so the canvas can
+      // blit the pattern instead of resampling it (a rotated, scaled pattern cost ~25 ms a frame)
+      const bite = (alpha: number, seed: number) => {
+        const tile = grain(seed);
+        if (!tile) return;
+        L.save();
+        L.setTransform(1, 0, 0, 1, 0, 0);
+        L.globalCompositeOperation = 'destination-out';
+        L.globalAlpha = Math.min(1, alpha);
+        const p = L.createPattern(tile, 'repeat');
+        if (p) {
+          // the tooth shifts when the line boils
+          if (typeof DOMMatrix !== 'undefined') p.setTransform(new DOMMatrix().translate(Math.floor(h1(boil, seed * 7 + 1) * 128) - bx, Math.floor(h1(boil, seed * 7 + 2) * 128) - by));
+          L.fillStyle = p;
+          L.fillRect(0, 0, w, h);
+        }
+        L.restore();
+      };
+      L.lineCap = 'round';
+      L.lineJoin = 'round';
       // halo strokes are bitten by the paper twice (sparse speckle), the cores once (dense, broken)
       for (const f of queue[0]) f(L);
       L.globalAlpha = 1;
-      bite(0.75 + 0.35 * rough, 1);
+      bite(0.75 + 0.35 * rough, 0);
       for (const f of queue[1]) f(L);
       L.globalAlpha = 1;
-      bite(0.45 + 0.45 * rough, 5);
+      bite(0.45 + 0.45 * rough, 1);
       ctx.save();
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.globalAlpha = 1;
       ctx.globalCompositeOperation = 'source-over';
-      ctx.drawImage(L.canvas, bx, by);
+      ctx.drawImage(L.canvas, 0, 0, w, h, bx, by, w, h);
       ctx.restore();
     },
   };
 };
+let layerW = 0, layerH = 0;
 
 // ------------------------------------------------------------- colour helpers
 const hex = (c: string): [number, number, number] => {
@@ -853,8 +883,9 @@ const draw = (ctx: CanvasRenderingContext2D, c: MoodsConfig, pose: Pose, face: F
   // 2. the crayon, on its own grainy layer
   const rough = Math.max(0, Math.min(1, Number(c.rough ?? 0.5)));
   const boil = c.boil === false ? 0 : Math.floor(t * 7);
-  const { L, queue, finish } = inkLayer(ctx, env, rough, boil);
-  const C: Crayon = { ctx: L, col: c.ink || INKS[0], rough, boil, w: 0.023, queue };
+  const { queue, box, finish } = inkLayer(ctx, env, rough, boil);
+  const L = ctx;
+  const C: Crayon = { ctx: L, col: c.ink || INKS[0], rough, boil, w: 0.023, queue, box };
   const hm = (u: number, v: number): Pt => [CX + u * rx + fx * 0.45, cy + v * ry + fy * 0.3];
   const p: P = { C, c, pose, face, t, rx, ry, cy, fx, fy, hm };
   L.save();

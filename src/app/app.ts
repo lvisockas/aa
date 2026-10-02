@@ -328,7 +328,7 @@ export class App {
             </article>`;
           }).join('')}
         </div>
-        <p class="foot-note">Rendered live in your browser: a WebGL2 ray marcher for the soft characters, a mesh rasteriser for the low-poly ones, Canvas2D for the doodles. No three.js, no downloaded assets.</p>
+        <p class="foot-note">Rendered live in your browser: a WebGL2 ray marcher for the soft characters, a mesh rasteriser for the low-poly ones, Canvas2D for the 2D styles. No three.js, no downloaded assets.</p>
       </section>`;
     this.main.querySelectorAll<HTMLButtonElement>('[data-open]').forEach((b) =>
       b.addEventListener('click', () => (location.hash = `#${b.dataset.open}`)),

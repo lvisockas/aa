@@ -79,6 +79,14 @@ export const researchHTML = `
   freckles, accessories) and sits on an optional pastel disc. The features slide slightly towards your cursor, and
   states bring props drawn in the same line: thinking dots, a pencil and page, a check.</p>
 
+  <h3>A 2D sketchbook · Ghosts, Blobs, Cards, Moods, Bugs</h3>
+  <p>Five more illustration styles, each rebuilt from a reference sheet with original characters.
+  <b>Ghosts</b>: rubbery cartoon ghosts with rimmed eyes, shouting mouths and noodle arms that sprout on demand.
+  <b>Blobs</b>: flat jelly shapes with lazy lids that breathe, dent and wobble. <b>Cards</b>: the whole card is the
+  character, and a line-drawn person's hands act out each state. <b>Moods</b>: faces in grainy wax crayon on colour
+  dots, with lines that boil like hand-drawn animation. <b>Bugs</b>: streaky painted critters on stick legs with
+  springy feelers and buzzing wings.</p>
+
   <h3>Why this renderer (and not three.js by default)</h3>
   <table>
     <tr><th>Option</th><th>Fit for these characters</th></tr>
