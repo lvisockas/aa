@@ -4,7 +4,7 @@ export const researchHTML = `
 <div class="doc">
   <p>Three AI-agent launches in eight weeks of 2026 all chose a <b>cute, toy-like face</b> for agents that act on
   your behalf. This studio rebuilds each visual language as a live, cursor-reactive 3D avatar system, plus a
-  fourth family built around the RebelMouse mascot.</p>
+  family built around the RebelMouse mascot and a low-poly mash-up of the two.</p>
 
   <h3>OpenAI · Dots</h3>
   <p>Announced at DevDay (29 Sep 2026): always-on agents powered by GPT-6 Astra, each with its own cloud computer
@@ -54,10 +54,17 @@ export const researchHTML = `
     description.</li>
   </ul>
 
+  <h3>Polydots · a low-poly mash-up</h3>
+  <p>An original fifth family: Dots silhouettes with the mouse's ears, tail and bandana, cut into <b>true low
+  poly</b>. Each body is a union of faceted ellipsoids, the intersection of tangent planes along an
+  icosahedron's 20 face normals and 12 vertex directions, so the silhouette is polygonal and every face is
+  flat. A facet slider slides the look from soccer ball to pure icosahedron, shapes morph through intermediate
+  polyhedra, and the CPU mirrors the field to anchor gem eyes, nose and ears on the actual facets.</p>
+
   <h3>Why this renderer (and not three.js by default)</h3>
   <table>
     <tr><th>Option</th><th>Fit for these characters</th></tr>
-    <tr><td><b>SDF ray-marching on raw WebGL2</b> <span class="pill">chosen</span></td><td>Characters are soft primitives blended together, so a signed distance field is their native form. Continuous shape morphs, squash and stretch, and poke dents come free. The field also gives soft shadows and AO, volumetric fur fits naturally, and it ships as one ~215 KB file (about 70 KB gzipped) with zero dependencies.</td></tr>
+    <tr><td><b>SDF ray-marching on raw WebGL2</b> <span class="pill">chosen</span></td><td>Characters are soft primitives blended together, so a signed distance field is their native form. Continuous shape morphs, squash and stretch, and poke dents come free. The field also gives soft shadows and AO, volumetric fur fits naturally, and it ships as one ~240 KB file (about 80 KB gzipped) with zero dependencies.</td></tr>
     <tr><td>three.js / Babylon / PlayCanvas</td><td>Excellent mesh engines, but blobby morphing shapes need re-meshing or morph targets, plus shadow maps, SSAO and shell geometry for fur. As a full-screen quad they add little.</td></tr>
     <tr><td>Rive / Lottie</td><td>Great 2D state machines (Dots-style UI loops), but not 3D.</td></tr>
     <tr><td>Pre-rendered, video or neural</td><td>Photoreal (Meta's own path), but no live customisation or pointer physics, and the payload is heavy.</td></tr>

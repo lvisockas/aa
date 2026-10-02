@@ -96,6 +96,27 @@ headband placement interpret the text description rather than copy the artwork. 
 palette is in the spirit of the RebelMouse site; exact brand colour values were not verified. The mark on
 the brand flag is an original tapered-snout mouse head, not a copy of any existing logo.
 
+### 1.6 Polydots · a low-poly Dots × RebelMouse mash-up (original)
+
+A fifth family answers "what if a Dot were a Rebel": Dots silhouettes (bean, cloud, pear, heart, round,
+drop) with the mouse's ears, tail, nose, whiskers and bandana, rendered as **genuine low poly**.
+
+* **Faceting is geometry, not a shading trick.** Each body is a union of *faceted ellipsoids*: the
+  intersection of the tangent planes of an ellipsoid along the 20 face normals and 12 vertex directions
+  of an icosahedron. The result is the icosidodecahedron family: a "facet size" slider lifts the 12
+  vertex caps, sliding the look from a soccer-ball mix of pentagons and triangles to a pure 20-triangle
+  icosahedron. Because the distance field is a max of planes, the silhouette is polygonal and the
+  finite-difference normals are flat per face with a crisp bevel at edges. Shapes morph by interpolating
+  the blob parameters, so a bean becomes a heart through intermediate polyhedra.
+* **Anchoring without a GPU pass.** The TypeScript side mirrors the facet SDF and sphere-traces from the
+  face centre to find where eyes, nose, ears and the tail root land on the actual facets, with the facet
+  normal from a numeric gradient. Eyes are small octahedral gems that slide across the face with the
+  gaze; blinks squash them to a line.
+* **Materials**: cut paper (matte, slightly flat, each face a hair lighter or darker via a hash of its
+  normal), gem (glassy clear coat with a warm transmission wrap) and vinyl toy. The tail is three beads,
+  the bandana is a faceted shell of the body cut to a band with a knot and two paper ribbons, and the
+  optional flag is planted at the knot with zig-zag folds that travel along the cloth.
+
 ---
 
 ## 2. Requirements that fall out of the research
@@ -120,7 +141,7 @@ The obvious move is three.js. The question was whether it's the *right* one for 
 
 | Approach | Shape variety and morphing | Plush fur | Lighting quality | Payload | Verdict |
 |---|---|---|---|---|---|
-| **SDF ray marching, raw WebGL2** | Native. Characters *are* blended primitives, so morphs are a `mix()` and squash, stretch and dents are domain warps | Volumetric shell integrated along the ray | Soft shadows and AO fall out of the distance field | ~215 KB single file (~70 KB gzipped), **0 deps** | **Chosen** |
+| **SDF ray marching, raw WebGL2** | Native. Characters *are* blended primitives, so morphs are a `mix()` and squash, stretch and dents are domain warps | Volumetric shell integrated along the ray | Soft shadows and AO fall out of the distance field | ~240 KB single file (~80 KB gzipped), **0 deps** | **Chosen** |
 | three.js / Babylon / PlayCanvas (meshes) | Needs procedural meshing (e.g. marching cubes) or morph targets with matching topology. Continuous shape morphs are awkward | Shells and fins, well understood | Shadow maps plus an SSAO pass for soft contact | 170 KB – 1.4 MB gz before content | Great engines, but they fight this content. As a full-screen quad they contribute almost nothing |
 | Rive / Lottie | 2D only | — | — | small | Good for Dots-style UI loops, not 3D |
 | Pre-rendered, video or neural (Meta's path) | Fixed at render time | Photoreal | Baked | MBs, or a GPU server stream | No live customisation or pointer physics |
@@ -141,8 +162,8 @@ The obvious move is three.js. The question was whether it's the *right* one for 
    acne or a screen-space AO pass.
 5. **Fur fits the model.** Plush is a thin participating medium around the skin surface. Marching through
    that shell is a natural extension of marching to the surface.
-6. **One tiny, dependency-free file.** The whole studio, including four renderers, UI and docs drawer,
-   ships as one ~215 KB HTML file (about 70 KB gzipped).
+6. **One tiny, dependency-free file.** The whole studio, including five renderers, UI and docs drawer,
+   ships as one ~240 KB HTML file (about 80 KB gzipped).
 
 The costs are real. Per-pixel work grows with scene complexity, compile times grow with shader size, and
 picking and anchoring need care. The architecture below exists to manage them.
@@ -193,6 +214,8 @@ Overlay (2D canvas): emotes and name tags, projected from 3D
 | Charlie sheen (Estevez & Kulla), clear coat, wrap lighting | felt, satin, vinyl |
 | Analytic sphere occluders for contact shadows, faded with distance and at the frame edge | floor |
 | Painted markings from nearest-part classification with analytic AA (patches, masks, socks, ringed tails) | Rebels |
+| Eye sockets carved with a smooth max, iris and pupil painted on a clear-coated eyeball, polka dots in cylindrical band coordinates | Rebels |
+| **Faceted ellipsoids** as max-of-planes fields over icosahedral direction sets, CPU-mirrored for anchoring, per-face hashed tint | Polydots |
 | Flat cloth strips with travelling ripples, waving flag cloth, props scaled about the hand so they stow smoothly | Rebels bandana ties and props |
 | Khronos PBR Neutral tone mapping, exact sRGB encode, blue-ish dither | output (keeps brand colours true) |
 | Edge AA from the closest-approach ratio of missed rays | hard silhouettes |
@@ -236,8 +259,8 @@ Overlay (2D canvas): emotes and name tags, projected from 3D
   packs finite parameters and survives boop, hold, pet and trick without NaNs.
 * `npm run interact` drives headless Chromium: gaze follows the pointer left and right, a click GPU-picks
   and selects the right avatar and dents it, the inspector follows, and the state bar works. This is run
-  for all four families, plus family-specific checks (shape morphs, accessories, species presets, the
-  aimed megaphone).
+  for all five families, plus family-specific checks (shape morphs, accessories, species presets, the
+  aimed megaphone, faceted-body morphs).
 * `npm run shots` takes screenshots of any route and size in software GL, with a GPU sync before capture.
 
 ## 6. Limitations and next steps

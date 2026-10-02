@@ -164,6 +164,8 @@ button { font: inherit; color: inherit; }
 .hero p { text-wrap: pretty; }
 .hero p { color: var(--muted); font-size: 16px; margin: 0; }
 .cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+/* an odd card count: the last one stretches across as a finale */
+.cards > .card:last-child:nth-child(odd) { grid-column: 1 / -1; }
 .card {
   position: relative;
   border-radius: 22px;

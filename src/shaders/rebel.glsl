@@ -107,9 +107,11 @@ float earsSDF(Char c, vec3 h, out float inner) {
     float d2 = sd2Cone(ep.xy, vec2(0.0), T - B.xy, R.x, R.y);
     float th = R.z;
     float dd = (length(vec2(max(d2 + th, 0.0), ep.z)) - th) * es;
+    float panel = R.w > 0.0 ? (1.0 - smoothstep(-0.008, 0.008, d2 + R.w)) * step(0.0, ep.z) : 0.0;
+    dd += panel * 0.0045 * es;   // the inner panel sits in a shallow dish
     if (dd < d) {
       d = dd;
-      inner = R.w > 0.0 ? (1.0 - smoothstep(-0.006, 0.006, d2 + R.w)) * step(0.0, ep.z) : 0.0;
+      inner = panel;
     }
   }
   return d;
@@ -129,8 +131,14 @@ float armsSDF(Char c, vec3 q) {
   b = smin(b, sdCapsuleT(q, c.aR1.xyz, c.aR2.xyz, c.aR1.w, c.aR2.w * 0.85), 0.008);
   return min(a, b);
 }
+// rounded mitt with a thumb on the inside
+float mittSDF(vec3 q, vec3 H, float r, float side) {
+  float palm = sdEllipsoid(q - H, vec3(r * 1.02, r * 0.9, r * 1.12));
+  float thumb = sdSphere(q - H - vec3(-side * r * 0.55, r * 0.5, r * 0.45), r * 0.42);
+  return smin(palm, thumb, 0.012);
+}
 float handsSDF(Char c, vec3 q) {
-  return min(sdSphere(q - c.aL2.xyz, c.aL2.w), sdSphere(q - c.aR2.xyz, c.aR2.w));
+  return min(mittSDF(q, c.aL2.xyz, c.aL2.w, -1.0), mittSDF(q, c.aR2.xyz, c.aR2.w, 1.0));
 }
 
 vec3 footPos(Char c, float side) {
@@ -146,9 +154,16 @@ float legsSDF(Char c, vec3 q) {
   }
   return d;
 }
+float footSDF(vec3 p) {
+  float d = sdEllipsoid(p, vec3(0.078, 0.05, 0.1));
+  for (int t = 0; t < 3; t++) {
+    float fx = (float(t) - 1.0) * 0.042;
+    d = smin(d, sdSphere(p - vec3(fx, -0.004, 0.092 - abs(fx) * 0.35), 0.026), 0.012);
+  }
+  return d;
+}
 float feetSDF(Char c, vec3 q) {
-  return min(sdEllipsoid(q - footPos(c, -1.0), vec3(0.072, 0.048, 0.095)),
-             sdEllipsoid(q - footPos(c, 1.0), vec3(0.072, 0.048, 0.095)));
+  return min(footSDF(q - footPos(c, -1.0)), footSDF(q - footPos(c, 1.0)));
 }
 
 // tail chain; t returns the position along the tail (0 root .. 1 tip)
@@ -165,13 +180,31 @@ float tailSDF(Char c, vec3 q, out float t) {
   return smin(smin(d0, d1, 0.012), d2, 0.012);
 }
 
+// shallow dishes the eyeballs sit in
+float socketsSDF(Char c, vec3 h) {
+  vec3 hc = headC(c), hr = headR(c);
+  float hs = c.body.y;
+  float s = c.eye.y * hs;
+  float ex = 0.1 * c.eye.z * hs, ey = hc.y + (0.045 + c.eye.w) * hs;
+  float d = 1e5;
+  for (int k = 0; k < 2; k++) {
+    float side = k == 0 ? -1.0 : 1.0;
+    vec3 a = facePoint(c, vec2(side * ex, ey));
+    vec3 n = normalize((a - hc) / (hr * hr));
+    d = min(d, sdEllipsoid(h - a - n * 0.034, vec3(0.072, 0.086, 0.048) * s));
+  }
+  return d;
+}
+
 float skinSDF(Char c, vec3 q) {
   vec3 h = toHead(c, q);
   float inner, tt;
-  float d = smin(sdEllipsoid(q - TORSO_C, torsoR(c)), sdEllipsoid(h - headC(c), headR(c)), 0.02);
+  float head = smax(sdEllipsoid(h - headC(c), headR(c)), -socketsSDF(c, h), 0.012);
+  float d = smin(sdEllipsoid(q - TORSO_C, torsoR(c)), head, 0.02);
   d = smin(d, muzzleSDF(c, h), 0.018);
   d = smin(d, earsSDF(c, h, inner), 0.008);
-  d = smin(d, min(armsSDF(c, q), handsSDF(c, q)), 0.01);
+  d = smin(d, armsSDF(c, q), 0.018);
+  d = smin(d, handsSDF(c, q), 0.008);
   d = smin(d, min(legsSDF(c, q), feetSDF(c, q)), 0.01);
   d = smin(d, tailSDF(c, q, tt), 0.012);
   return d;
@@ -204,7 +237,7 @@ vec3 megaphoneAxis(Char c) {
 // ids: 1 skin, 2 sclera, 3 pupil, 4 lid, 5 thread, 6 brow, 7 nose, 8 mouth,
 //      9 tongue, 10 teeth, 11 whisker, 12 bandana, 13 frame, 14 lens,
 //      15 pole, 16 flag cloth, 17 megaphone, 18 paper, 19 pencil,
-//      20 laptop, 21 laptop logo, 22 gear
+//      20 laptop, 21 laptop logo, 22 gear, 23 iris
 float hardParts(Char c, vec3 q, out int id) {
   q = warp(c, q);
   id = 0;
@@ -246,12 +279,13 @@ float hardParts(Char c, vec3 q, out int id) {
         // pupil rides the sclera towards the gaze direction
         vec2 look = c.eye2.zw * vec2(0.5, 0.42);
         vec3 pd = normalize(n + vec3(look, 0.0));
-        float pr = 0.033 * s * c.bandA.z * (kind == 3 ? 0.85 : 1.0);
+        float pr = 0.024 * s * c.bandA.z * (kind == 3 ? 0.8 : 1.0);
         vec3 pc = pd * R * 0.93;
-        float pu = max(length(e - pc) - pr, sc - 0.003);
+        float rp = length(e - pc);
         float de = sc;
         int eid = 2;
-        if (pu < de + 0.0015) { de = min(de, pu); eid = 3; }
+        // iris ring around the pupil, both painted on the eyeball with a hint of relief
+        if (rp < pr * 1.85 && sc < 0.004) { de = sc - 0.0015; eid = rp < pr ? 3 : 23; }
         // upper lid (closes for blinks / squints), lower lid (smiles)
         float lidCut = mix(1.15, -1.05, max(blink, c.eye2.y));
         vec3 le = e;
@@ -331,7 +365,7 @@ float hardParts(Char c, vec3 q, out int id) {
       float off = fl * 0.5 + 0.012 * hs;
       float shell = sdEllipsoid(bp, hr + off);
       float y0 = 0.165 * hs;
-      float band = bs == 1 ? max(shell, abs(bp.y - y0) - 0.034 * hs) : max(shell, y0 - 0.02 * hs - bp.y);
+      float band = bs == 1 ? smax(shell, abs(bp.y - y0) - 0.034 * hs, 0.006) : smax(shell, y0 - 0.02 * hs - bp.y, 0.006);
       // knot at the back-right with two fluttering ribbon tails
       vec3 kp = vec3(hr.x * 0.62, y0, -hr.z * 0.8);
       float knot = sdEllipsoid(bp - kp, vec3(0.035, 0.03, 0.03) * hs);
@@ -505,7 +539,8 @@ vec3 regionColor(Char c, vec3 q, float aa) {
   vec2 fxy = h.xy - hc.xy;
   float front = smoothstep(-0.05, 0.08, h.z - hc.z);
   // belly eyePatch on the torso front
-  float belly = (1.0 - smoothstep(-aa, aa, length((q.xy - vec2(0.0, 0.235)) / vec2(0.13, 0.135) * c.body.x) - 1.0)) * smoothstep(0.0, 0.08, q.z);
+  float bw = max(aa, 0.03);
+  float belly = (1.0 - smoothstep(-bw, bw, length((q.xy - vec2(0.0, 0.235)) / vec2(0.13, 0.135) * c.body.x) - 1.0)) * smoothstep(0.0, 0.08, q.z);
 
   vec3 col = base;
   if (sp == 0) {             // mouse: grey with pink extremities and a pale muzzle & belly
@@ -632,11 +667,19 @@ Surf surfAt(Char c, vec3 q, vec3 n) {
     s.alb = regionColor(c, q, max(gFoot * 0.9, 0.0015));
     if (c.wob.w > 0.0) s.alb = mix(s.alb, vec3(1.0, 0.45, 0.55), blushAt(c, q, s.alb, 700.0) * 0.6);
     if (mat == 2) { s.flatK = 1.0; }
-    else { s.rough = 0.42; s.wrap = 0.35; s.clear = 0.35; }
-  } else if (id == 2) {               // sclera
-    s.alb = vec3(0.94, 0.94, 0.93); s.rough = 0.18; s.clear = 0.6; s.wrap = 0.25;
+    else {
+      // glossy vinyl: soft wrap, a real clear coat, and a touch of shade towards the feet
+      s.rough = 0.3; s.wrap = 0.3; s.clear = 0.55; s.f0 = 0.045;
+      s.alb *= mix(0.84, 1.0, smoothstep(0.0, 0.5, q.y));
+    }
+  } else if (id == 2) {               // sclera: wet and glossy
+    s.alb = vec3(0.96, 0.96, 0.95); s.rough = 0.1; s.clear = 0.9; s.wrap = 0.25;
   } else if (id == 3) {               // pupil
-    s.alb = vec3(0.01); s.rough = 0.08; s.f0 = 0.05; s.clear = 0.9;
+    s.alb = vec3(0.008); s.rough = 0.06; s.f0 = 0.06; s.clear = 1.0;
+  } else if (id == 23) {              // iris: a warm ring per species
+    int sp = species(c);
+    s.alb = sp == 3 ? vec3(0.62, 0.3, 0.06) : sp == 2 ? vec3(0.3, 0.17, 0.07) : sp == 1 ? vec3(0.16, 0.09, 0.05) : vec3(0.2, 0.11, 0.06);
+    s.rough = 0.12; s.clear = 1.0; s.f0 = 0.05;
   } else if (id == 4) {               // eyelid in the surrounding colour
     s.alb = (species(c) == 1 || species(c) == 2) ? c.col3.rgb : c.col.rgb;
     s.rough = 0.45; s.wrap = 0.3;
@@ -655,10 +698,15 @@ Surf surfAt(Char c, vec3 q, vec3 n) {
   } else if (id == 12) {              // cotton bandana with a paisley-dot print
     s.alb = c.band.yzw; s.rough = 0.72; s.sheen = 0.45;
     vec3 h = toHead(c, q);
-    vec2 g = (int(c.band.x + 0.5) == 3 ? q.xy : h.xz + h.yy) * 55.0;
+    vec3 hp = h - headC(c);
+    bool neck = int(c.band.x + 0.5) == 3;
+    // polka dots laid out around the band (angle x height), offset every other row
+    vec2 g = neck ? vec2(atan(q.x, q.z) * 0.22, q.y) : vec2(atan(hp.x, hp.z) * headR(c).x, hp.y);
+    g /= 0.034;
+    g.x += 0.5 * mod(floor(g.y), 2.0);
     vec2 cell = fract(g) - 0.5;
-    float dot1 = length(cell * vec2(1.0, 1.6)) - 0.15;
-    if (dot1 < 0.0) s.alb = mix(s.alb, vec3(0.97), 0.92);
+    float dot1 = length(cell) - 0.2;
+    s.alb = mix(s.alb, vec3(0.97), 0.92 * (1.0 - smoothstep(-0.08, 0.08, dot1)));
   } else if (id == 13) {
     s.alb = c.glass.yzw; s.rough = 0.25; s.clear = 0.5;
   } else if (id == 14) {

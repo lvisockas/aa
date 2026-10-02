@@ -123,6 +123,14 @@ if (family === 'dots') {
   await page.click('.ctl[data-key="shape"] button[data-v="5"]');
   const sh = await page.evaluate(() => { const s = window.__app.liveStages[0]; return s.avatars[s.selected].config.shape; });
   check('silhouette picker morphs the bot', sh === 5, `shape=${sh}`);
+} else if (family === 'poly') {
+  await page.click('.ctl[data-key="shape"] button[data-v="3"]');
+  await settle(1);
+  const m = await page.evaluate(() => { const s = window.__app.liveStages[0]; const a = s.avatars[s.selected]; return { shape: a.config.shape, from: a.config._from?.shape, morph: a.pose.morph }; });
+  check('shape change morphs between faceted bodies', m.shape === 3 && m.from !== undefined && m.morph < 1, JSON.stringify(m));
+  await page.click('.ctl[data-key="material"] button[data-v="gem"]');
+  const mat = await page.evaluate(() => { const s = window.__app.liveStages[0]; return s.avatars[s.selected].config.material; });
+  check('finish chips update the avatar', mat === 'gem', mat);
 } else if (family === 'rebel') {
   await page.click('.ctl[data-key="species"] button[data-v="1"]');
   await settle(1);
@@ -154,13 +162,13 @@ check('roster chip puts that character on stage', chip === 0, `selected=${chip}`
 // 8) edits persist across reloads
 await page.fill('.ctl[data-key="name"] input', 'Persisto');
 await wait(200);
-await page.reload();
+await page.reload({ timeout: 180000 });   // software GL may still be finishing a heavy frame
 for (let i = 0; i < 240 && (await frames()) < 2; i++) await wait(250);
 const names = await page.evaluate(() => window.__app.liveStages[0].avatars.map((a) => a.config.name));
 check('customisations persist across reloads', names.includes('Persisto'), names.join(', '));
 await page.evaluate(() => localStorage.clear());
 
-await page.screenshot({ path: path.join(root, `shots/interact_${family}.png`) });
 check('no page errors', errors.length === 0, errors.join(' | '));
+await page.screenshot({ path: path.join(root, `shots/interact_${family}.png`), timeout: 600000 });
 await browser.close();
 process.exit(results.every((r) => r.ok) ? 0 : 1);

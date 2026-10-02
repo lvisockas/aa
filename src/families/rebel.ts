@@ -42,10 +42,10 @@ const SPECIES_OPTS: Option[] = [
 
 /** Species palettes: body, light (muzzle/belly), dark (markings), accent (ears/nose/paws). */
 const SPECIES: Record<number, Partial<RebelConfig>> = {
-  0: { bodyColor: '#5E6573', lightColor: '#D7DBE2', darkColor: '#2B2F37', accentColor: '#F59DB4', whiskers: true },
+  0: { bodyColor: '#7B8494', lightColor: '#E9ECF1', darkColor: '#3A3F4A', accentColor: '#F6A5BB', whiskers: true },
   1: { bodyColor: '#F6F5F1', lightColor: '#FFFFFF', darkColor: '#1D1D21', accentColor: '#F59DB4', whiskers: false },
-  2: { bodyColor: '#8D939D', lightColor: '#EEECE7', darkColor: '#26282D', accentColor: '#E9A5B2', whiskers: true },
-  3: { bodyColor: '#F07A2B', lightColor: '#FFF5E8', darkColor: '#2A1C17', accentColor: '#FFD3B9', whiskers: true },
+  2: { bodyColor: '#9AA0A8', lightColor: '#F0EEE9', darkColor: '#2A2C31', accentColor: '#E9A5B2', whiskers: true },
+  3: { bodyColor: '#F28435', lightColor: '#FFF6EA', darkColor: '#2A1C17', accentColor: '#FFD3B9', whiskers: true },
 };
 
 /** the mascot's signature red first, then blues and pinks in the spirit of the RebelMouse site */
@@ -114,10 +114,10 @@ const base = (o: Partial<RebelConfig>): RebelConfig => ({
   expression: 'neutral',
   species: 0,
   material: 'vinyl',
-  bodyColor: '#5E6573',
-  lightColor: '#D7DBE2',
-  darkColor: '#2B2F37',
-  accentColor: '#F59DB4',
+  bodyColor: '#7B8494',
+  lightColor: '#E9ECF1',
+  darkColor: '#3A3F4A',
+  accentColor: '#F6A5BB',
   furLength: 0.03,
   chub: 1,
   headSize: 1,
@@ -199,17 +199,17 @@ export const rebel: FamilyDef<RebelConfig> = {
   traits: ['Iconic red bandana', 'Simple, playful silhouettes', 'Expressive brows & tails'],
   look: {
     dark: false,
-    groundShadow: 0.36,
+    groundShadow: 0.44,
     exposure: 1.0,
     groundY: 0,
     lights: {
-      key: normalize([-0.5, 0.75, 0.7]),
-      keyI: 1.15,
-      rim: normalize([0.45, 0.5, -0.75]),
-      rimI: 1.1,
+      key: normalize([-0.55, 0.8, 0.6]),
+      keyI: 1.3,
+      rim: normalize([0.5, 0.45, -0.75]),
+      rimI: 1.6,
       fill: normalize([0.75, 0.12, 0.6]),
-      fillI: 0.32,
-      sky: [0.42, 0.5, 0.64],
+      fillI: 0.4,
+      sky: [0.46, 0.54, 0.68],
       ground: [0.18, 0.24, 0.32],
       warm: [1.0, 0.96, 0.9],
       env: 1.0,
@@ -267,9 +267,9 @@ export const rebel: FamilyDef<RebelConfig> = {
       id: 'colors',
       title: 'Colours',
       controls: [
-        { type: 'swatches', key: 'bodyColor', label: 'Body', colors: ['#5E6573', '#8D939D', '#F6F5F1', '#F07A2B', '#9A6A43', '#26262A', '#6366F1'], custom: true },
-        { type: 'swatches', key: 'lightColor', label: 'Muzzle & belly', colors: ['#D7DBE2', '#FFFFFF', '#EEECE7', '#FFF5E8', '#F9D9C9'], custom: true },
-        { type: 'swatches', key: 'darkColor', label: 'Markings', colors: ['#2B2F37', '#1D1D21', '#26282D', '#2A1C17', '#4B2E83'], custom: true },
+        { type: 'swatches', key: 'bodyColor', label: 'Body', colors: ['#7B8494', '#9AA0A8', '#F6F5F1', '#F28435', '#9A6A43', '#26262A', '#6366F1'], custom: true },
+        { type: 'swatches', key: 'lightColor', label: 'Muzzle & belly', colors: ['#E9ECF1', '#FFFFFF', '#F0EEE9', '#FFF6EA', '#F9D9C9'], custom: true },
+        { type: 'swatches', key: 'darkColor', label: 'Markings', colors: ['#3A3F4A', '#1D1D21', '#2A2C31', '#2A1C17', '#4B2E83'], custom: true },
         { type: 'swatches', key: 'accentColor', label: 'Ears, nose & paws', colors: ['#F59DB4', '#E9A5B2', '#FFD3B9', '#FF47DA', '#2684B1'], custom: true },
       ],
     },

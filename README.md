@@ -1,13 +1,14 @@
 # Cute Agents
 
 Interactive, cursor-reactive 3D avatars inspired by the three agent mascots of autumn 2026,
-**OpenAI Dots**, **xAI Grok Bot** and **Meta Muse ("Jolly")**, plus a fourth family built around the
-**RebelMouse** mascot. Every character is rendered live by a custom signed-distance-field ray marcher on
-WebGL2, with no three.js, no meshes and no downloaded assets, and every character is fully customisable.
+**OpenAI Dots**, **xAI Grok Bot** and **Meta Muse ("Jolly")**, plus a family built around the
+**RebelMouse** mascot and a low-poly **Dots × RebelMouse** mash-up. Every character is rendered live by a
+custom signed-distance-field ray marcher on WebGL2, with no three.js, no meshes and no downloaded assets,
+and every character is fully customisable.
 
-| Dots (OpenAI) | Grok Bot (xAI) | Muse (Meta) | Rebels (RebelMouse) |
-|---|---|---|---|
-| Plush fleece blobs with bead, diamond and googly eyes, berets, glasses, bow ties, headphones | Inflated geometric shapes with vector slit eyes, 16 expressions, shapes that morph like jelly | Articulated plush "Jolly" cast with longer fur, outfits, hats and held items | The bandana-wearing mouse plus a panda, raccoon and fox: swishing tails, flags and megaphones, in vinyl, plush or flat-logo finishes |
+| Dots (OpenAI) | Grok Bot (xAI) | Muse (Meta) | Rebels (RebelMouse) | Polydots (mash-up) |
+|---|---|---|---|---|
+| Plush fleece blobs with bead, diamond and googly eyes, berets, glasses, bow ties, headphones | Inflated geometric shapes with vector slit eyes, 16 expressions, shapes that morph like jelly | Articulated plush "Jolly" cast with longer fur, outfits, hats and held items | The bandana-wearing mouse plus a panda, raccoon and fox: swishing tails, flags and megaphones, in vinyl, plush or flat-logo finishes | Dots silhouettes cut into true low-poly facets, with mouse ears, bead-gem eyes, a bandana and a bead tail, in cut-paper, gem or vinyl finishes |
 
 **Open `dist/index.html` in any modern browser.** It's a single self-contained file.
 
@@ -25,9 +26,9 @@ WebGL2, with no three.js, no meshes and no downloaded assets, and every characte
 
 Short version: these characters *are* soft primitives blended together, which is a distance field.
 Ray marching that field directly gives continuous shape morphing, poke dents, squash and stretch, soft
-shadows, ambient occlusion and volumetric fur almost for free, in one ~215 KB file. A mesh engine would
+shadows, ambient occlusion and volumetric fur almost for free, in one ~240 KB file. A mesh engine would
 need remeshing or morph targets, shadow maps, SSAO and shell geometry to get the same look.
-**See [docs/RESEARCH.md](docs/RESEARCH.md)** for the product research (all four families) and the full
+**See [docs/RESEARCH.md](docs/RESEARCH.md)** for the product research (all five families) and the full
 comparison: three.js, Babylon, PlayCanvas, Rive, pre-rendered and neural video, Gaussian splats, WebGPU.
 
 ## Development
@@ -44,7 +45,7 @@ npm run debug      # dist/debug.html: one family, no UI (debug.html?family=dots&
 npm run build:artifact  # dist/artifact.html for sandboxed hosts (no document skeleton, no downloads)
 ```
 
-Routes: `#dots`, `#grok`, `#muse`, `#rebel` (overview otherwise). URL parameters: `?q=low|medium|high|ultra`
+Routes: `#dots`, `#grok`, `#muse`, `#rebel`, `#poly` (overview otherwise). URL parameters: `?q=low|medium|high|ultra`
 (quality), `?t=1.5` (freeze time, deterministic renders), `?stop=N` (stop after N frames).
 
 ### Layout
@@ -53,7 +54,7 @@ Routes: `#dots`, `#grok`, `#muse`, `#rebel` (overview otherwise). URL parameters
 src/
   engine/      renderer (multi-view WebGL2), program compile, noise and strand textures, springs, math
   shaders/     common_head.glsl (SDF library, materials) · common_main.glsl (march, fur, shading)
-               dots.glsl · grok.glsl · muse.glsl · rebel.glsl (one distance field + materials per family)
+               dots.glsl · grok.glsl · muse.glsl · rebel.glsl · poly.glsl (one distance field + materials per family)
   families/    presets, settings schema, expressions, states, parameter packing, compositions, arm rig
   avatar/      per-character brain: gaze, blinks, expression swaps, squash/hop, reactions, states
   app/         stages (DOM-hosted views, picking, framing), overlay emotes, app shell
@@ -71,5 +72,5 @@ state's arm pose (the Rebels aim a megaphone instead of raising it).
 ## Credits
 
 Characters are fan interpretations for research and design exploration. Dots, Grok Bot, Muse, Jolly and
-the RebelMouse mascot belong to their respective owners. Rendering techniques draw on work by Inigo Quilez, Khronos (PBR Neutral),
+the RebelMouse mascot belong to their respective owners; the Polydots are an original mash-up of the two. Rendering techniques draw on work by Inigo Quilez, Khronos (PBR Neutral),
 Estevez & Kulla (sheen) and t3ssel8r (procedural motion).

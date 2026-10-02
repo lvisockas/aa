@@ -4,6 +4,7 @@ import { dots } from '../families/dots';
 import { grok } from '../families/grok';
 import { muse } from '../families/muse';
 import { rebel } from '../families/rebel';
+import { poly } from '../families/poly';
 import type { BaseConfig, FamilyDef } from '../families/types';
 import { icons } from '../ui/icons';
 import { Inspector } from '../ui/inspector';
@@ -18,10 +19,10 @@ type Route = 'home' | FamilyId;
 declare const __SANDBOXED__: boolean;
 type AnyFamily = FamilyDef<any>;
 
-export const FAMILIES: Record<FamilyId, AnyFamily> = { dots, grok, muse, rebel };
-const ORDER: FamilyId[] = ['dots', 'grok', 'muse', 'rebel'];
+export const FAMILIES: Record<FamilyId, AnyFamily> = { dots, grok, muse, rebel, poly };
+const ORDER: FamilyId[] = ['dots', 'grok', 'muse', 'rebel', 'poly'];
 /** each view shows one character: the family's lead on the overview, and the studio opens on it too */
-const LEAD: Record<FamilyId, number> = { dots: 4, grok: 0, muse: 6, rebel: 0 };
+const LEAD: Record<FamilyId, number> = { dots: 4, grok: 0, muse: 6, rebel: 0, poly: 0 };
 
 /** Scripted task runs that showcase each family's motion-based state language. */
 const DEMO: Record<FamilyId, Array<[string, number]>> = {
@@ -30,6 +31,7 @@ const DEMO: Record<FamilyId, Array<[string, number]>> = {
   muse: [['listening', 1.8], ['thinking', 2.4], ['working', 3.4], ['speaking', 2.8], ['celebrating', 2.6], ['idle', 0]],
   // RebelMouse's agentic CMS pitch: it plans, creates, optimizes and grows
   rebel: [['planning', 2.4], ['creating', 3.2], ['optimizing', 2.8], ['publishing', 2.8], ['growing', 2.6], ['idle', 0]],
+  poly: [['listening', 1.8], ['thinking', 2.4], ['working', 3.0], ['awaiting', 2.4], ['complete', 2.6], ['idle', 0]],
 };
 
 const STORE = 'cute-agents:v1:';
@@ -131,6 +133,7 @@ export class App {
           <button class="tab" role="tab" data-route="grok"><span class="long">Grok Bot</span><span class="short">Grok</span><small>xAI</small></button>
           <button class="tab" role="tab" data-route="muse">Muse<small>Meta</small></button>
           <button class="tab" role="tab" data-route="rebel">Rebels<small>RebelMouse</small></button>
+          <button class="tab" role="tab" data-route="poly"><span class="long">Polydots</span><span class="short">Poly</span><small>mash-up</small></button>
         </nav>
         <div class="top-actions">
           <div class="menu" id="settings">
@@ -266,7 +269,7 @@ export class App {
       <section class="overview">
         <div class="hero">
           <h1>Why AI agents are getting cute</h1>
-          <p>OpenAI Dots, Grok Bot, Meta Muse and the RebelMouse crew, rebuilt as live 3D characters. Move your cursor and they'll watch you. Click to boop, hold to squish, drag to pet.</p>
+          <p>OpenAI Dots, Grok Bot, Meta Muse and the RebelMouse crew, rebuilt as live 3D characters, plus a low-poly Dots × RebelMouse mash-up. Move your cursor and they'll watch you. Click to boop, hold to squish, drag to pet.</p>
         </div>
         <div class="cards">
           ${ORDER.map((id) => {
