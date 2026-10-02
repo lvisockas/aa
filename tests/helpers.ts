@@ -11,6 +11,8 @@ import { blob } from '../src/families/blob';
 import { cards } from '../src/families/cards';
 import { moods } from '../src/families/moods';
 import { bugs } from '../src/families/bugs';
+import { bomber } from '../src/families/bomber';
+import { crew } from '../src/families/crew';
 import type { FamilyDef } from '../src/families/types';
 
-export const FAMILY_LIST: FamilyDef<any>[] = [dots, grok, muse, rebel, poly, doodle, clawd, faces, ghost, blob, cards, moods, bugs];
+export const FAMILY_LIST: FamilyDef<any>[] = [dots, grok, muse, rebel, poly, doodle, clawd, faces, ghost, blob, cards, moods, bugs, bomber, crew];

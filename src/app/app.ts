@@ -13,6 +13,8 @@ import { blob } from '../families/blob';
 import { cards } from '../families/cards';
 import { moods } from '../families/moods';
 import { bugs } from '../families/bugs';
+import { bomber } from '../families/bomber';
+import { crew } from '../families/crew';
 import type { BaseConfig, FamilyDef } from '../families/types';
 import { icons } from '../ui/icons';
 import { Inspector } from '../ui/inspector';
@@ -27,15 +29,17 @@ type Route = 'home' | FamilyId;
 declare const __SANDBOXED__: boolean;
 type AnyFamily = FamilyDef<any>;
 
-export const FAMILIES: Record<FamilyId, AnyFamily> = { dots, grok, muse, rebel, poly, doodle, clawd, faces, ghost, blob, cards, moods, bugs };
-const ORDER: FamilyId[] = ['dots', 'grok', 'muse', 'rebel', 'poly', 'doodle', 'clawd', 'faces', 'ghost', 'blob', 'cards', 'moods', 'bugs'];
+export const FAMILIES: Record<FamilyId, AnyFamily> = { dots, grok, muse, rebel, poly, doodle, clawd, faces, ghost, blob, cards, moods, bugs, bomber, crew };
+const ORDER: FamilyId[] = ['dots', 'grok', 'muse', 'rebel', 'poly', 'bomber', 'crew', 'doodle', 'clawd', 'faces', 'ghost', 'blob', 'cards', 'moods', 'bugs'];
 /** each view shows one character: the family's lead on the overview, and the studio opens on it too */
-const LEAD: Record<FamilyId, number> = { dots: 4, grok: 0, muse: 6, rebel: 0, poly: 0, doodle: 0, clawd: 0, faces: 0, ghost: 0, blob: 0, cards: 0, moods: 0, bugs: 0 };
+const LEAD: Record<FamilyId, number> = { dots: 4, grok: 0, muse: 6, rebel: 0, poly: 0, doodle: 0, clawd: 0, faces: 0, ghost: 0, blob: 0, cards: 0, moods: 0, bugs: 0, bomber: 0, crew: 0 };
 
 /** Scripted task runs that showcase each family's motion-based state language. */
 const DEMO: Record<FamilyId, Array<[string, number]>> = {
   dots: [['listening', 1.8], ['thinking', 2.4], ['working', 3.2], ['awaiting', 2.6], ['complete', 2.6], ['idle', 0]],
   grok: [['thinking', 2.2], ['working', 3.0], ['orbit', 3.2], ['waiting', 2.2], ['done', 2.6], ['idle', 0]],
+  bomber: [['thinking', 2.2], ['working', 3.0], ['orbit', 3.2], ['waiting', 2.2], ['done', 2.6], ['idle', 0]],
+  crew: [['thinking', 2.2], ['working', 3.0], ['orbit', 3.2], ['waiting', 2.2], ['done', 2.6], ['idle', 0]],
   muse: [['listening', 1.8], ['thinking', 2.4], ['working', 3.4], ['speaking', 2.8], ['celebrating', 2.6], ['idle', 0]],
   // RebelMouse's agentic CMS pitch: it plans, creates, optimizes and grows
   rebel: [['planning', 2.4], ['creating', 3.2], ['optimizing', 2.8], ['publishing', 2.8], ['growing', 2.6], ['idle', 0]],
@@ -159,6 +163,8 @@ export class App {
           <button class="tab" role="tab" data-route="muse" title="Muse · Meta">Muse<small>Meta</small></button>
           <button class="tab" role="tab" data-route="rebel" title="Rebels · RebelMouse">Rebels<small>RebelMouse</small></button>
           <button class="tab" role="tab" data-route="poly" title="Polydots · mash-up"><span class="long">Polydots</span><span class="short">Poly</span><small>mash-up</small></button>
+          <button class="tab" role="tab" data-route="bomber" title="Bombers · Arcade blasters">Bombers<small>Arcade blasters</small></button>
+          <button class="tab" role="tab" data-route="crew" title="Crew · Space impostors">Crew<small>Space impostors</small></button>
           <button class="tab" role="tab" data-route="doodle" title="Doodles · 2D"><span class="long">Doodles</span><span class="short">2D</span><small>2D</small></button>
           <button class="tab" role="tab" data-route="clawd" title="Clawd · Claude Code">Clawd<small>Claude Code</small></button>
           <button class="tab" role="tab" data-route="faces" title="Faces · Notion-style">Faces<small>Notion-style</small></button>

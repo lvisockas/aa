@@ -13,7 +13,7 @@ const sync = () => {
   o.width = o.height = 2;
   o.getContext('2d').drawImage(c, 0, 0, 2, 2);
 };
-for (const fam of ['dots', 'grok', 'muse', 'rebel', 'poly']) {
+for (const fam of ['dots', 'grok', 'muse', 'rebel', 'poly', 'bomber', 'crew']) {
   const page = await browser.newPage({ viewport: { width: +w, height: +h }, deviceScaleFactor: 1 });
   // one frame to compile and warm up, timed separately
   await page.goto(pathToFileURL(path.join(root, 'dist/debug.html')).href + `?family=${fam}&only=0&q=${q}&t=1&stop=1`);

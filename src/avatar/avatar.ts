@@ -325,6 +325,8 @@ export class Avatar<C extends BaseConfig = BaseConfig> {
   private familyExpr(kind: 'squeeze' | 'dizzy' | 'pet' | 'excited'): string {
     const map: Record<string, Record<string, string>> = {
       grok: { squeeze: 'laugh', dizzy: 'dizzy', pet: 'happy', excited: 'starstruck' },
+      bomber: { squeeze: 'laugh', dizzy: 'dizzy', pet: 'happy', excited: 'starstruck' },
+      crew: { squeeze: 'laugh', dizzy: 'dizzy', pet: 'happy', excited: 'starstruck' },
       dots: { squeeze: 'squeeze', dizzy: 'dizzy', pet: 'happy', excited: 'excited' },
       muse: { squeeze: 'laugh', dizzy: 'dizzy', pet: 'blissful', excited: 'excited' },
       rebel: { squeeze: 'laugh', dizzy: 'dizzy', pet: 'happy', excited: 'wow' },
