@@ -73,6 +73,12 @@ export const researchHTML = `
   way pixel art animates. The eyes step towards your cursor, the legs scuttle, the arms type, and squash drops
   whole rows. A terminal status line runs a sparkle spinner with a playful verb while it works.</p>
 
+  <h3>Faces · Notion-style portraits</h3>
+  <p>Black-and-white portraits in the style of Notion's avatar maker: one even line weight, solid ink hair, dot
+  eyes, no shading. Each face is assembled from parts (face shape, hair, eyes, brows, nose, mouth, glasses, beard,
+  freckles, accessories) and sits on an optional pastel disc. The features slide slightly towards your cursor, and
+  states bring props drawn in the same line: thinking dots, a pencil and page, a check.</p>
+
   <h3>Why this renderer (and not three.js by default)</h3>
   <table>
     <tr><th>Option</th><th>Fit for these characters</th></tr>

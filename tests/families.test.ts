@@ -7,6 +7,7 @@ import { rebel } from '../src/families/rebel';
 import { poly } from '../src/families/poly';
 import { doodle, doodleItems } from '../src/families/doodle';
 import { clawd } from '../src/families/clawd';
+import { faces } from '../src/families/faces';
 import { VERT_FLOATS } from '../src/engine/mesh';
 import { FAMILY_LIST } from './helpers';
 
@@ -162,4 +163,19 @@ test('clawd draws every state and accessory without errors', () => {
       clawd.draw2d!(ctx, a.config, a.pose, a.face, env);
     }
   }
+});
+
+test('faces draw every part option in every state without errors', () => {
+  const ctx = mockCtx();
+  const env = { t: 1.7, px: 0.004, size: [320, 200] as [number, number], canvas: () => mockCtx(), squash: [1, 1] as [number, number], roll: 0 };
+  const parts: Array<[string, number]> = [['face', 6], ['hair', 8], ['eyes', 5], ['brows', 4], ['nose', 5], ['mouth', 5], ['glasses', 4], ['facialHair', 4], ['details', 4], ['accessory', 5]];
+  for (const [key, n] of parts)
+    for (let v = 0; v < n; v++) {
+      const a = new Avatar(faces, { ...faces.roster()[0], [key]: v, backdrop: '#FFE3E3' }, () => {}, 1);
+      for (const state of Object.keys(faces.states)) {
+        a.setState(state, 0);
+        for (let i = 0; i < 2; i++) a.update(1 / 30, { t: i / 30, pointer: [0.4, 1, 1], pointerIdle: 0, camera: [0, 1, 6], neighbors: [a], reducedMotion: false });
+        faces.draw2d!(ctx, a.config, a.pose, a.face, env);
+      }
+    }
 });

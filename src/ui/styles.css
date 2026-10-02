@@ -118,6 +118,12 @@ button { font: inherit; color: inherit; }
 .tab[aria-selected='true'] { background: var(--panel); color: var(--text); box-shadow: var(--shadow); }
 .tab small { font-weight: 450; opacity: 0.6; margin-left: 4px; }
 .tab .short { display: none; }
+/* Nine tabs with sublabels need ~1600px; below that keep the names, drop the sublabels. */
+@media (max-width: 1640px) {
+  .tabs { min-width: 0; }
+  .tab { padding: 7px 12px; }
+  .tab small { display: none; }
+}
 .top-actions { display: flex; gap: 6px; align-items: center; }
 .icon-btn {
   display: inline-flex;

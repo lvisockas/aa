@@ -96,6 +96,23 @@ headband placement interpret the text description rather than copy the artwork. 
 palette is in the spirit of the RebelMouse site; exact brand colour values were not verified. The mark on
 the brand flag is an original tapered-snout mouse head, not a copy of any existing logo.
 
+### 1.9 Faces · Notion-style portraits
+
+Notion's avatar style, built with Buck as the "Notion Faces" maker, is a black monoline portrait on white:
+one uniform stroke weight, no shading, solid black hair, dot eyes and a small set of interchangeable parts
+(face, hair, eyes, brows, nose, mouth, glasses, beard, accessories) that combine into millions of faces. Design
+Compass's breakdown points out why it works: the parts are deliberately minimal, so a face reads as a
+person rather than a likeness, and the same line weight keeps every combination consistent.
+
+The rebuild follows those rules in Canvas2D. Every part is a path drawn at one stroke weight (1.6% of the
+head height); hair and beards are solid ink fills, skin is white or a flat tone, and an optional pastel disc
+sits behind the bust. Parts are layered back hair → bust → ears → head → details → eyes → brows → nose →
+beard → mouth → front hair → glasses → accessory. Movement stays 2D: the features slide a little towards the
+cursor as the head turns (a cheap parallax), blinks squash the eyes, and the expressions only move brows and
+mouths, the way a flat illustration would. States add props from the same line vocabulary: thinking dots,
+a pencil and page for writing, a check for done. Cast: Ivy (bob, round glasses), Theo (curls, square
+glasses, beard), Juno (bun, freckles, earring), Max (spiky hair, headphones), Ada (long waves, pencil).
+
 ### 1.8 Clawd · Claude Code's terminal crab
 
 Clawd is the 8-bit crab that greets you at the top of a Claude Code session, in rgb(215, 119, 87) on the
@@ -220,6 +237,7 @@ So the renderer is now a hybrid, and each family uses the technique that fits it
 | Polydots | triangle rasterisation, 4x MSAA | it is polygons; the mesh is rebuilt on the CPU each frame from the same parameters |
 | Doodles | Canvas2D | flat 2D art styles need paths, strokes, patterns and blend modes, not 3D |
 | Clawd | Canvas2D, nearest-neighbour pixel sprite | the original is terminal block art; motion snaps to its pixel grid |
+| Faces | Canvas2D, monoline paths | a line-drawn portrait is strokes and flat fills; parts swap as paths |
 
 All three share one canvas compositor, the same camera, lights and tone mapping (the lighting code
 lives in one `lighting.glsl` used by both GPU paths), the same picking API (exact SDF picking, a CPU
@@ -319,8 +337,8 @@ Overlay (2D canvas): emotes and name tags, projected from 3D
   packs finite parameters and survives boop, hold, pet and trick without NaNs.
 * `npm run interact` drives headless Chromium: gaze follows the pointer left and right, a click GPU-picks
   and selects the right avatar and dents it, the inspector follows, and the state bar works. This is run
-  for all seven families, plus family-specific checks (shape morphs, accessories, species presets, the
-  aimed megaphone, faceted-body morphs, 2D style switching, the terminal crab's states). A unit test
+  for all eight families, plus family-specific checks (shape morphs, accessories, species presets, the
+  aimed megaphone, faceted-body morphs, 2D style switching, the terminal crab's states, Notion-style part swaps). A unit test
   guards against the click-then-squash bug (a quick click used to leave the hold timer running).
 * `npm run shots` takes screenshots of any route and size in software GL, with a GPU sync before capture.
 * `npm run bench` reports steady-state frame cost per family in software GL (480×300, low quality):
@@ -356,6 +374,7 @@ Overlay (2D canvas): emotes and name tags, projected from 3D
 * Runtime Wire: [Meta gives Muse a live avatar](https://runtimewire.com/article/meta-muse-realtime-avatar)
 * Design Compass: [Why AI agents are getting cute](https://designcompass.org/en/2026/09/30/why-ai-agents-are-getting-cute/)
 * Codrops: [Reverse-engineering Claude AI's mascot animations with SVG and GSAP](https://tympanus.net/codrops/2026/05/05/reverse-engineering-claude-ais-mascot-animations-with-svg-and-gsap/) · Stark Insider: [Clawd, the retro mascot of the command line](https://www.starkinsider.com/2025/10/clawd-ai-retro-mascot-command-line.html)
+* Buck: [Notion Faces](https://buck.co/work/notion-faces) · Design Compass: [Notion Faces](https://designcompass.org/en/2025/01/08/notion-face/)
 * RebelMouse: [Creative agency](https://www.rebelmouse.com/creative-agency) (mascot description) · [2026 platform updates](https://www.rebelmouse.com/2026-platform-updates) · [AI CMS](https://www.rebelmouse.com/ai-cms) · [The agentic website for the AI era](https://www.rebelmouse.com/agentic-website-ai-era) · [How RebelMouse built an agentic CMS](https://www.rebelmouse.com/how-rebelmouse-built-agentic-cms)
 * American Express OPEN Forum: [A HuffPo veteran creates a new content management site](https://www.americanexpress.com/us/small-business/openforum/articles/a-huffpo-veteran-creates-a-new-content-management-site/)
 * journalism.co.uk: [News outlets given 'social front pages' using new RebelMouse platform](https://www.journalism.co.uk/news-outlets-show-social-sharing-with-new-rebelmouse-platform/)

@@ -331,6 +331,7 @@ export class Avatar<C extends BaseConfig = BaseConfig> {
       poly: { squeeze: 'squeeze', dizzy: 'dizzy', pet: 'happy', excited: 'excited' },
       doodle: { squeeze: 'squeeze', dizzy: 'dizzy', pet: 'happy', excited: 'excited' },
       clawd: { squeeze: 'happy', dizzy: 'dizzy', pet: 'happy', excited: 'excited' },
+      faces: { squeeze: 'happy', dizzy: 'dizzy', pet: 'happy', excited: 'excited' },
     };
     return map[this.family.id]?.[kind] ?? 'happy';
   }

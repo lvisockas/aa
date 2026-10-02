@@ -2,15 +2,15 @@
 
 Interactive, cursor-reactive 3D avatars inspired by the three agent mascots of autumn 2026,
 **OpenAI Dots**, **xAI Grok Bot** and **Meta Muse ("Jolly")**, plus a family built around the
-**RebelMouse** mascot, a low-poly **Dots × RebelMouse** mash-up, five **2D doodles** and **Clawd**, Claude
-Code's terminal crab. Every character
+**RebelMouse** mascot, a low-poly **Dots × RebelMouse** mash-up, five **2D doodles**, **Clawd**, Claude
+Code's terminal crab, and Notion-style line-drawn **Faces**. Every character
 is rendered live, with no three.js and no downloaded assets, and every character is fully customisable.
 The renderer is a hybrid: a WebGL2 signed-distance-field ray marcher for the soft characters, a mesh
 rasteriser in the same renderer for the low-poly ones, and Canvas2D for the 2D styles.
 
-| Dots (OpenAI) | Grok Bot (xAI) | Muse (Meta) | Rebels (RebelMouse) | Polydots (mash-up) | Doodles (2D) | Clawd (Claude Code) |
-|---|---|---|---|---|---|---|
-| Plush fleece blobs with bead, diamond and googly eyes, berets, glasses, bow ties, headphones | Inflated geometric shapes with vector slit eyes, 16 expressions, shapes that morph like jelly | Articulated plush "Jolly" cast with longer fur, outfits, hats and held items | The bandana-wearing mouse plus a panda, raccoon and fox: swishing tails, flags and megaphones, in vinyl, plush or flat-logo finishes | Dots silhouettes cut into true low-poly facets, with mouse ears, bead-gem eyes, a bandana and a bead tail, in cut-paper, gem or vinyl finishes | Five characters in five simple styles: flat vector, ink doodle, pixel art, paper cut-out, risograph | The terminal crab at its true block-art resolution, animated in whole pixels, with a working status line |
+| Dots (OpenAI) | Grok Bot (xAI) | Muse (Meta) | Rebels (RebelMouse) | Polydots (mash-up) | Doodles (2D) | Clawd (Claude Code) | Faces (Notion-style) |
+|---|---|---|---|---|---|---|---|
+| Plush fleece blobs with bead, diamond and googly eyes, berets, glasses, bow ties, headphones | Inflated geometric shapes with vector slit eyes, 16 expressions, shapes that morph like jelly | Articulated plush "Jolly" cast with longer fur, outfits, hats and held items | The bandana-wearing mouse plus a panda, raccoon and fox: swishing tails, flags and megaphones, in vinyl, plush or flat-logo finishes | Dots silhouettes cut into true low-poly facets, with mouse ears, bead-gem eyes, a bandana and a bead tail, in cut-paper, gem or vinyl finishes | Five characters in five simple styles: flat vector, ink doodle, pixel art, paper cut-out, risograph | The terminal crab at its true block-art resolution, animated in whole pixels, with a working status line | Black-and-white monoline portraits built from parts: 6 face shapes, 8 hairstyles, eyes, brows, noses, mouths, glasses, beards, freckles and accessories, with a soft pastel backdrop |
 
 **Open `dist/index.html` in any modern browser.** It's a single self-contained file.
 
@@ -30,7 +30,7 @@ Short version: these characters *are* soft primitives blended together, which is
 Ray marching that field directly gives continuous shape morphing, poke dents, squash and stretch, soft
 shadows, ambient occlusion and volumetric fur almost for free, in one ~240 KB file. A mesh engine would
 need remeshing or morph targets, shadow maps, SSAO and shell geometry to get the same look.
-**See [docs/RESEARCH.md](docs/RESEARCH.md)** for the product research (all seven families), the hybrid-rendering decision and the full
+**See [docs/RESEARCH.md](docs/RESEARCH.md)** for the product research (all eight families), the hybrid-rendering decision and the full
 comparison: three.js, Babylon, PlayCanvas, Rive, pre-rendered and neural video, Gaussian splats, WebGPU.
 
 ## Development
@@ -49,7 +49,7 @@ npm run debug      # dist/debug.html: one family, no UI (debug.html?family=dots&
 npm run build:artifact  # dist/artifact.html for sandboxed hosts (no document skeleton, no downloads)
 ```
 
-Routes: `#dots`, `#grok`, `#muse`, `#rebel`, `#poly`, `#doodle`, `#clawd` (overview otherwise). URL parameters: `?q=low|medium|high|ultra`
+Routes: `#dots`, `#grok`, `#muse`, `#rebel`, `#poly`, `#doodle`, `#clawd`, `#faces` (overview otherwise). URL parameters: `?q=low|medium|high|ultra`
 (quality), `?res=0.4` (pin the render scale), `?t=1.5` (freeze time, deterministic renders), `?stop=N` (stop after N frames).
 
 Headless tests run on SwiftShader (a CPU emulation of the GPU), which is 100× or more slower than real hardware for
@@ -81,5 +81,6 @@ state's arm pose (the Rebels aim a megaphone instead of raising it).
 ## Credits
 
 Characters are fan interpretations for research and design exploration. Dots, Grok Bot, Muse, Jolly, the
-RebelMouse mascot and Clawd belong to their respective owners; the Polydots and Doodles are original. Rendering techniques draw on work by Inigo Quilez, Khronos (PBR Neutral),
+RebelMouse mascot and Clawd belong to their respective owners; the Faces follow the style of Notion's avatar maker
+(Notion Faces, by Buck) but every part is drawn from scratch; the Polydots and Doodles are original. Rendering techniques draw on work by Inigo Quilez, Khronos (PBR Neutral),
 Estevez & Kulla (sheen) and t3ssel8r (procedural motion).

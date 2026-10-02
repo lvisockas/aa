@@ -127,6 +127,20 @@ if (family === 'dots') {
   await page.click('.ctl[data-key="shape"] button[data-v="5"]');
   const sh = await page.evaluate(() => { const s = window.__app.liveStages[0]; return s.avatars[s.selected].config.shape; });
   check('silhouette picker morphs the bot', sh === 5, `shape=${sh}`);
+} else if (family === 'faces') {
+  await page.click('.ctl[data-key="hair"] button[data-v="7"]');
+  await page.click('details[data-sec="extras"] > summary').catch(() => {});
+  await page.click('.ctl[data-key="glasses"] button[data-v="3"]');
+  await settle(2);
+  const d = await page.evaluate(() => {
+    const s = window.__app.liveStages[0];
+    const c = s.avatars[s.selected].config;
+    const px = s.canvas2d.getContext('2d').getImageData(0, 0, s.canvas2d.width, s.canvas2d.height).data;
+    let ink = 0;
+    for (let i = 0; i < px.length; i += 4 * 7) if (px[i + 3] > 200 && px[i] < 60) ink++;
+    return { hair: c.hair, glasses: c.glasses, ink };
+  });
+  check('part chips redraw the portrait in ink', d.hair === 7 && d.glasses === 3 && d.ink > 100, JSON.stringify(d));
 } else if (family === 'clawd') {
   await page.click('.ctl[data-key="accessory"] button[data-v="3"]');
   await page.click('.ctl[data-key="state"] button[data-v="working"]');
