@@ -373,7 +373,8 @@ export class Avatar<C extends BaseConfig = BaseConfig> {
     if (S.gaze === 'up') target = [head[0] - 0.8, head[1] + 1.1, head[2] + 1.6];
     else if (S.gaze === 'down') target = [head[0], head[1] - 1.2, head[2] + 1.4];
     else if (S.gaze === 'away') target = [head[0] + 1.5 * Math.sin(ph * 0.4), head[1] + 0.2, head[2] + 1.0];
-    else if (S.gaze === 'user') target = ctx.camera;
+    // "look at the user": the cursor is where the user is while it moves, the camera otherwise
+    else if (S.gaze === 'user') target = followPointer && ctx.pointer ? ctx.pointer : ctx.camera;
     else if (S.gaze === 'closed') {
       target = [head[0], head[1] - 0.3, head[2] + 2];
       eyesClosed = true;

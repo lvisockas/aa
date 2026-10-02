@@ -77,7 +77,7 @@ export const groupPhoto = (n: number, aspect: number, o: GroupOptions): Composit
 
 /** Camera that frames a single character standing at the origin. */
 export const soloCamera = (aspect: number, charW: number, charH: number, fov = deg(24), lift = 0.25): Camera => {
-  const halfH = Math.max(charH * 0.78, (charW * 0.8) / aspect);
+  const halfH = Math.max(charH * 0.7, (charW * 0.74) / aspect);
   const dist = halfH / Math.tan(fov / 2);
   const cy = charH * 0.5;
   return { pos: [0, cy + halfH * lift, dist], target: [0, cy, 0], fov };

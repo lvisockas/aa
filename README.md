@@ -13,7 +13,8 @@ WebGL2, with no three.js, no meshes and no downloaded assets, and every characte
 
 ## What you can do
 
-* **Move the pointer** and the cast watches you: eyes lead, then bodies and heads follow, each family with its own physical personality.
+* **One character per view.** Each overview card shows its family's lead, and each studio shows one character at a time: switch with the ‹ › buttons on the stage, the roster chips or the arrow keys, and the newcomer hops in.
+* **Move the pointer** and the character watches you: eyes lead, then body and head follow, each family with its own physical personality.
 * **Click** to boop: the surface dents exactly where you clicked (GPU picking), then the character squashes, hops and shows an emote. Five quick boops make it dizzy.
 * **Hold** to squish, then release for a big jump. **Drag across** a character to pet it. **Double-click** for a spin.
 * **Agent states**: switch states from the bar (idle, thinking, working, waiting, blocked, done, plus each family's own), or press **Run a task** to watch motion-based state expression end to end.

@@ -60,18 +60,25 @@ const left = await state();
 await moveTo(899, stageBox.y + stageBox.h * 0.5);
 await settle(40);
 const right = await state();
-const avgLook = (st) => st.avatars.reduce((a, b) => a + b.lookX + b.yaw, 0) / st.avatars.length;
+// one character per view: measure the one on stage
+const avgLook = (st) => st.avatars[st.selected].lookX + st.avatars[st.selected].yaw;
 check('gaze follows pointer to the left', avgLook(left) < -0.05, `avg=${avgLook(left).toFixed(3)}`);
 check('gaze follows pointer to the right', avgLook(right) > 0.05, `avg=${avgLook(right).toFixed(3)}`);
 
-// 3) click (boop) the third avatar: GPU pick must select it and dent it
-const target = 2;
-const pos = right.avatars[target].screen;
+// 3) the stage shows one character: "next" swaps who is on stage, then a click GPU-picks and dents it
+const before = right.selected;
 cursor = null;
+await page.click('[data-tool="next"]');
+await settle(3);
+const swapped = await state();
+const target = swapped.selected;
+const shown = await page.evaluate(() => window.__app.liveStages[0].getView().chars.length);
+check('next puts a different character on stage (one per view)', target !== before && shown === 1, `selected ${before} -> ${target}, chars on stage ${shown}`);
+const pos = swapped.avatars[target].screen;
 await page.mouse.click(pos.x, pos.y + 25);
 await settle(2);
 const after = await state();
-check('click picks and selects the avatar under the pointer', after.selected === target, `selected=${after.selected} (${after.title})`);
+check('click picks the character on stage', after.selected === target, `selected=${after.selected} (${after.title})`);
 check('boop dents the surface / squashes', Math.abs(after.avatars[target].poke) > 0.001 || Math.abs(after.avatars[target].squash) > 0.01, `poke=${after.avatars[target].poke} squash=${after.avatars[target].squash}`);
 check('inspector follows selection', after.title === after.avatars[target].name, after.title);
 
@@ -82,8 +89,9 @@ const st = await page.evaluate(() => window.__app.liveStages[0].avatars[window._
 check('state bar sets the selected avatar state', typeof st === 'string' && st !== 'idle', st);
 
 // 5) hold to squish, release to jump
-const holdTarget = 0;
-const hp = (await state()).avatars[holdTarget].screen;
+const s5 = await state();
+const holdTarget = s5.selected;
+const hp = s5.avatars[holdTarget].screen;
 await page.mouse.move(hp.x, hp.y + 25);
 await page.mouse.down();
 await settle(6);
@@ -137,11 +145,11 @@ if (family === 'dots') {
   check('species switch applies its defaults (bunny ears)', sp.species === 1 && sp.ears === 1, JSON.stringify(sp));
 }
 
-// 7) solo mode
-await page.click('[data-tool="solo"]');
-const mode = await page.evaluate(() => window.__app.liveStages[0].mode);
-check('solo toggles focus mode', mode === 'solo', mode);
-await page.click('[data-tool="solo"]');
+// 7) the roster chips switch the character on stage too
+await page.click('.roster button[data-sel="0"]');
+await settle(2);
+const chip = await page.evaluate(() => window.__app.liveStages[0].selected);
+check('roster chip puts that character on stage', chip === 0, `selected=${chip}`);
 
 // 8) edits persist across reloads
 await page.fill('.ctl[data-key="name"] input', 'Persisto');

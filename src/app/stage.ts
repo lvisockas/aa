@@ -29,21 +29,23 @@ interface Press {
 }
 
 /**
- * A DOM element that hosts a family of avatars: camera framing, pointer
- * picking, gaze targets and emote anchoring. The renderer draws every stage
- * into one shared full-window canvas, scissored to the element's rectangle.
+ * A DOM element that hosts a family's roster and shows one avatar at a time
+ * (the selected one): camera framing, pointer picking, gaze targets and emote
+ * anchoring. The renderer draws every stage into one shared full-window
+ * canvas, scissored to the element's rectangle.
  */
 export class Stage<C extends BaseConfig = BaseConfig> {
   avatars: Avatar<C>[] = [];
   selected = 0;
-  mode: 'group' | 'solo' = 'group';
   ready = false;
   private cam: Camera | null = null;
   private rect = { left: 0, top: 0, width: 1, height: 1 };
   private view: View | null = null;
   private hoverIdx = -1;
   private press: Press | null = null;
-  private tagAlpha = 1;
+  private tagAlpha = 0;
+  private shown: Avatar<C> | null = null;
+  private shownAt = -Infinity;
   private parallax: [number, number] = [0, 0];
   private comp: Composition | null = null;
   private placed = false;
@@ -68,7 +70,11 @@ export class Stage<C extends BaseConfig = BaseConfig> {
     this.selected = Math.min(this.selected, this.avatars.length - 1);
   }
 
-  /** Re-compose for the current aspect; homes glide to their new spots. */
+  /** the one avatar on stage */
+  private get lead(): Avatar<C> | undefined {
+    return this.avatars[this.selected];
+  }
+
   private freeHeight(): number {
     const [top, bottom] = this.insets();
     return Math.max(this.rect.height - top - bottom, this.rect.height * 0.45);
@@ -82,19 +88,19 @@ export class Stage<C extends BaseConfig = BaseConfig> {
     return [top * k, bottom * k];
   }
 
+  /** Re-compose for the current aspect; the home glides to its new spot. */
   private compose(dt: number): void {
     const aspect = this.rect.width / Math.max(this.freeHeight(), 1);
-    this.comp = this.family.compose(this.avatars.length, aspect, this.opts.compact);
+    this.comp = this.family.compose(1, aspect, this.opts.compact);
+    const a = this.lead;
+    const p = this.comp.placements[0];
+    if (!a || !p) return;
     const k = this.placed ? 1 - Math.exp(-6 * dt) : 1;
-    this.avatars.forEach((a, i) => {
-      const p = this.comp!.placements[i];
-      if (!p) return;
-      const h = a.home;
-      h.pos = [lerp(h.pos[0], p.pos[0], k), lerp(h.pos[1], p.pos[1], k), lerp(h.pos[2], p.pos[2], k)];
-      h.scale = lerp(h.scale, p.scale, k);
-      h.yaw = lerp(h.yaw, p.yaw, k);
-      h.roll = lerp(h.roll ?? 0, p.roll ?? 0, k);
-    });
+    const h = a.home;
+    h.pos = [lerp(h.pos[0], p.pos[0], k), lerp(h.pos[1], p.pos[1], k), lerp(h.pos[2], p.pos[2], k)];
+    h.scale = lerp(h.scale, p.scale, k);
+    h.yaw = lerp(h.yaw, p.yaw, k);
+    h.roll = lerp(h.roll ?? 0, p.roll ?? 0, k);
     this.placed = true;
   }
 
@@ -106,16 +112,15 @@ export class Stage<C extends BaseConfig = BaseConfig> {
   private targetCamera(): Camera {
     const freeH = this.freeHeight();
     const aspect = this.rect.width / Math.max(freeH, 1);
-    const target = this.comp?.placements[this.selected];
-    let cam: Camera;
-    if (this.mode === 'solo' && target) {
-      const base = this.family.solo(aspect);
+    const target = this.comp?.placements[0];
+    let cam = this.family.solo(aspect);
+    if (target) {
       const s = target.scale;
       const off: Vec3 = target.pos;
-      const rel = sub(base.pos, base.target);
-      const tgt: Vec3 = [base.target[0] * s + off[0], base.target[1] * s + off[1], base.target[2] * s + off[2]];
-      cam = { pos: add(tgt, [rel[0] * s, rel[1] * s, rel[2] * s]), target: tgt, fov: base.fov };
-    } else cam = this.comp ? this.comp.camera : this.family.solo(aspect);
+      const rel = sub(cam.pos, cam.target);
+      const tgt: Vec3 = [cam.target[0] * s + off[0], cam.target[1] * s + off[1], cam.target[2] * s + off[2]];
+      cam = { pos: add(tgt, [rel[0] * s, rel[1] * s, rel[2] * s]), target: tgt, fov: cam.fov };
+    }
     // frame inside the free band: widen the lens to the full height and shift it
     const [top, bottom] = this.insets();
     const h = Math.max(this.rect.height, 1);
@@ -222,13 +227,13 @@ export class Stage<C extends BaseConfig = BaseConfig> {
         best = i;
       }
     });
-    return best;
+    return best < 0 ? -1 : this.selected;
   }
 
   private gpuPick(clientX: number, clientY: number): { index: number; q: Vec3 } | null {
     if (!this.view) return null;
     const r = this.renderer.pick(this.view, this.opts.slot, clientX, clientY);
-    if (r) return { index: r.index, q: r.q };
+    if (r) return { index: this.selected, q: r.q };
     const i = this.hitTest(clientX, clientY);
     if (i < 0) return null;
     const a = this.avatars[i];
@@ -289,6 +294,16 @@ export class Stage<C extends BaseConfig = BaseConfig> {
   update(dt: number, t: number, pointer: { x: number; y: number } | null, pointerIdle: number, reducedMotion: boolean): void {
     const r = this.el.getBoundingClientRect();
     this.rect = { left: r.left, top: r.top, width: r.width, height: r.height };
+    if (this.lead !== this.shown) {
+      // a different character steps on stage: snap it into place with a little hop
+      if (this.shown && this.lead) {
+        this.lead.jump(1.3, t);
+        this.shownAt = performance.now() / 1000;
+      }
+      this.shown = this.lead ?? null;
+      this.placed = false;
+      this.press = null;
+    }
     this.compose(dt);
     const cam = this.updateCamera(dt, pointer, reducedMotion ? 0 : 1);
 
@@ -313,16 +328,17 @@ export class Stage<C extends BaseConfig = BaseConfig> {
         target = add(ray.o, [ray.d[0] * tt, ray.d[1] * tt, ray.d[2] * tt]);
       }
     }
-    for (const a of this.avatars) {
-      a.selected = this.opts.tags && a === this.avatars[this.selected];
-      a.update(dt, { t, pointer: target, pointerIdle, camera: cam.pos, neighbors: this.avatars, reducedMotion });
+    const a = this.lead;
+    if (a) {
+      a.selected = this.opts.tags;
+      a.update(dt, { t, pointer: target, pointerIdle, camera: cam.pos, neighbors: [a], reducedMotion });
     }
     this.view = {
       rect: this.rect,
       family: this.family.id,
       camera: cam,
       look: this.family.look,
-      chars: this.avatars.map((a) => a.build()),
+      chars: a ? [a.build()] : [],
       anchors: this.family.anchors,
     };
   }
@@ -344,9 +360,10 @@ export class Stage<C extends BaseConfig = BaseConfig> {
 
   tags(dt: number): Tag[] {
     if (!this.opts.tags || !this.ready) return [];
-    const a = this.avatars[this.selected];
+    const a = this.lead;
     if (!a) return [];
-    this.tagAlpha = damp(this.tagAlpha, this.mode === 'solo' ? 0 : 1, 6, dt);
+    // the name pops up when a new character steps on stage, then fades
+    this.tagAlpha = damp(this.tagAlpha, performance.now() / 1000 - this.shownAt < 1.6 ? 1 : 0, 6, dt);
     const p = this.project(this.headTop(a));
     if (!p) return [];
     return [{ x: p.x, y: p.y - 6, text: a.config.name || 'Unnamed', alpha: this.tagAlpha, dark: this.dark }];

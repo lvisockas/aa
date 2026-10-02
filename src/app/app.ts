@@ -20,7 +20,8 @@ type AnyFamily = FamilyDef<any>;
 
 export const FAMILIES: Record<FamilyId, AnyFamily> = { dots, grok, muse, rebel };
 const ORDER: FamilyId[] = ['dots', 'grok', 'muse', 'rebel'];
-const OVERVIEW_PICK: Record<FamilyId, number[]> = { dots: [0, 1, 2, 3], grok: [0, 1, 2, 3, 4, 5, 6, 7, 8], muse: [0, 2, 4, 6], rebel: [0, 1, 2, 3] };
+/** each view shows one character: the family's lead on the overview, and the studio opens on it too */
+const LEAD: Record<FamilyId, number> = { dots: 4, grok: 0, muse: 6, rebel: 0 };
 
 /** Scripted task runs that showcase each family's motion-based state language. */
 const DEMO: Record<FamilyId, Array<[string, number]>> = {
@@ -288,8 +289,7 @@ export class App {
     );
     ORDER.forEach((id, slot) => {
       const el = this.main.querySelector<HTMLElement>(`.stage[data-family="${id}"]`)!;
-      const configs = OVERVIEW_PICK[id].map((i) => this.configs[id][i]);
-      const stage = new Stage(el, FAMILIES[id], configs, this.renderer, this.overlay, {
+      const stage = new Stage(el, FAMILIES[id], [this.configs[id][LEAD[id]]], this.renderer, this.overlay, {
         compact: id !== 'grok',
         tags: false,
         slot,
@@ -304,7 +304,7 @@ export class App {
     this.main.innerHTML = `
       <section class="studio">
         <div class="stage" data-family="${id}" data-dark="${f.dark}" style="background:${f.background}" tabindex="0" role="application"
-             aria-label="${f.name} studio. Move the pointer and the avatars follow it. Click to boop, hold to squish, drag to pet. Arrow keys select, space boops.">
+             aria-label="${f.name} studio. Move the pointer and the avatar follows it. Click to boop, hold to squish, drag to pet. Arrow keys switch character, space boops.">
           ${this.loader()}
           <div class="stage-ui">
             <div class="stage-head">
@@ -314,7 +314,8 @@ export class App {
                 <div class="traits">${f.traits.map((t) => `<span class="trait">${t}</span>`).join('')}</div>
               </div>
               <div class="stage-tools">
-                <button class="icon-btn" data-tool="solo" title="Focus on the selected avatar">${icons.solo}<span>Solo</span></button>
+                <button class="icon-btn" data-tool="prev" title="Previous character" aria-label="Previous character">${icons.prev}</button>
+                <button class="icon-btn" data-tool="next" title="Next character" aria-label="Next character">${icons.next}</button>
                 ${__SANDBOXED__ ? '' : `<button class="icon-btn" data-tool="shot" title="Download a PNG snapshot" aria-label="Snapshot">${icons.camera}</button>`}
               </div>
             </div>
@@ -348,6 +349,7 @@ export class App {
       slot: 0,
       onSelect: (i) => this.select(i),
     });
+    stage.selected = LEAD[id];
     this.stages = [stage];
     this.studio = stage;
     this.inspector = new Inspector(this.main.querySelector<HTMLElement>('.inspector')!, {
@@ -372,12 +374,10 @@ export class App {
       }),
     );
     el.querySelector('[data-tool="demo"]')!.addEventListener('click', () => this.runDemo());
+    const n = stage.avatars.length;
+    el.querySelector('[data-tool="prev"]')!.addEventListener('click', () => this.select((stage.selected + n - 1) % n));
+    el.querySelector('[data-tool="next"]')!.addEventListener('click', () => this.select((stage.selected + 1) % n));
     el.querySelector('[data-tool="shot"]')?.addEventListener('click', () => this.snapshot());
-    const soloBtn = el.querySelector<HTMLButtonElement>('[data-tool="solo"]')!;
-    soloBtn.addEventListener('click', () => {
-      stage.mode = stage.mode === 'solo' ? 'group' : 'solo';
-      soloBtn.innerHTML = stage.mode === 'solo' ? `${icons.group}<span>Group</span>` : `${icons.solo}<span>Solo</span>`;
-    });
     // keep the stage-ui controls from triggering avatar picks
     el.querySelectorAll('.stage-tools, .stage-bottom').forEach((n) => n.addEventListener('pointerdown', (e) => e.stopPropagation()));
   }
