@@ -1,0 +1,19 @@
+{
+  "name": "cute-agents",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Interactive, cursor-reactive 3D avatars inspired by OpenAI Dots, Grok Bot and Meta Muse - rendered with a custom SDF raymarcher on WebGL2.",
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/build.mjs --serve",
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test tests/",
+    "shots": "node scripts/shots.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "playwright": "1.56.1",
+    "typescript": "6.0.2"
+  }
+}
