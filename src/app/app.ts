@@ -8,6 +8,11 @@ import { poly } from '../families/poly';
 import { doodle } from '../families/doodle';
 import { clawd } from '../families/clawd';
 import { faces } from '../families/faces';
+import { ghost } from '../families/ghost';
+import { blob } from '../families/blob';
+import { cards } from '../families/cards';
+import { moods } from '../families/moods';
+import { bugs } from '../families/bugs';
 import type { BaseConfig, FamilyDef } from '../families/types';
 import { icons } from '../ui/icons';
 import { Inspector } from '../ui/inspector';
@@ -22,10 +27,10 @@ type Route = 'home' | FamilyId;
 declare const __SANDBOXED__: boolean;
 type AnyFamily = FamilyDef<any>;
 
-export const FAMILIES: Record<FamilyId, AnyFamily> = { dots, grok, muse, rebel, poly, doodle, clawd, faces };
-const ORDER: FamilyId[] = ['dots', 'grok', 'muse', 'rebel', 'poly', 'doodle', 'clawd', 'faces'];
+export const FAMILIES: Record<FamilyId, AnyFamily> = { dots, grok, muse, rebel, poly, doodle, clawd, faces, ghost, blob, cards, moods, bugs };
+const ORDER: FamilyId[] = ['dots', 'grok', 'muse', 'rebel', 'poly', 'doodle', 'clawd', 'faces', 'ghost', 'blob', 'cards', 'moods', 'bugs'];
 /** each view shows one character: the family's lead on the overview, and the studio opens on it too */
-const LEAD: Record<FamilyId, number> = { dots: 4, grok: 0, muse: 6, rebel: 0, poly: 0, doodle: 0, clawd: 0, faces: 0 };
+const LEAD: Record<FamilyId, number> = { dots: 4, grok: 0, muse: 6, rebel: 0, poly: 0, doodle: 0, clawd: 0, faces: 0, ghost: 0, blob: 0, cards: 0, moods: 0, bugs: 0 };
 
 /** Scripted task runs that showcase each family's motion-based state language. */
 const DEMO: Record<FamilyId, Array<[string, number]>> = {
@@ -38,6 +43,11 @@ const DEMO: Record<FamilyId, Array<[string, number]>> = {
   doodle: [['listening', 1.8], ['thinking', 2.4], ['working', 3.0], ['speaking', 2.4], ['happy', 2.6], ['idle', 0]],
   clawd: [['listening', 2.2], ['thinking', 2.6], ['working', 4.0], ['awaiting', 2.6], ['done', 2.6], ['idle', 0]],
   faces: [['listening', 2.0], ['thinking', 2.6], ['writing', 3.4], ['speaking', 2.6], ['done', 2.6], ['idle', 0]],
+  ghost: [['listening', 2.0], ['thinking', 2.6], ['working', 3.2], ['speaking', 2.6], ['done', 2.6], ['idle', 0]],
+  blob: [['listening', 2.0], ['thinking', 2.6], ['working', 3.2], ['speaking', 2.6], ['done', 2.6], ['idle', 0]],
+  cards: [['listening', 2.0], ['thinking', 2.6], ['working', 3.2], ['speaking', 2.6], ['done', 2.6], ['idle', 0]],
+  moods: [['listening', 2.0], ['thinking', 2.6], ['working', 3.2], ['speaking', 2.6], ['done', 2.6], ['idle', 0]],
+  bugs: [['listening', 2.0], ['thinking', 2.6], ['working', 3.2], ['speaking', 2.6], ['done', 2.6], ['idle', 0]],
 };
 
 const STORE = 'cute-agents:v1:';
@@ -152,6 +162,11 @@ export class App {
           <button class="tab" role="tab" data-route="doodle"><span class="long">Doodles</span><span class="short">2D</span><small>2D</small></button>
           <button class="tab" role="tab" data-route="clawd">Clawd<small>Claude Code</small></button>
           <button class="tab" role="tab" data-route="faces">Faces<small>Notion-style</small></button>
+          <button class="tab" role="tab" data-route="ghost">Ghosts<small>Imaginary</small></button>
+          <button class="tab" role="tab" data-route="blob">Blobs<small>Jelly</small></button>
+          <button class="tab" role="tab" data-route="cards">Cards<small>Archetypes</small></button>
+          <button class="tab" role="tab" data-route="moods">Moods<small>Crayon</small></button>
+          <button class="tab" role="tab" data-route="bugs">Bugs<small>Marker</small></button>
         </nav>
         <div class="top-actions">
           <div class="menu" id="settings">

@@ -6,6 +6,11 @@ import { poly } from '../src/families/poly';
 import { doodle } from '../src/families/doodle';
 import { clawd } from '../src/families/clawd';
 import { faces } from '../src/families/faces';
+import { ghost } from '../src/families/ghost';
+import { blob } from '../src/families/blob';
+import { cards } from '../src/families/cards';
+import { moods } from '../src/families/moods';
+import { bugs } from '../src/families/bugs';
 import type { FamilyDef } from '../src/families/types';
 
-export const FAMILY_LIST: FamilyDef<any>[] = [dots, grok, muse, rebel, poly, doodle, clawd, faces];
+export const FAMILY_LIST: FamilyDef<any>[] = [dots, grok, muse, rebel, poly, doodle, clawd, faces, ghost, blob, cards, moods, bugs];

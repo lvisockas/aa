@@ -332,6 +332,11 @@ export class Avatar<C extends BaseConfig = BaseConfig> {
       doodle: { squeeze: 'squeeze', dizzy: 'dizzy', pet: 'happy', excited: 'excited' },
       clawd: { squeeze: 'happy', dizzy: 'dizzy', pet: 'happy', excited: 'excited' },
       faces: { squeeze: 'happy', dizzy: 'dizzy', pet: 'happy', excited: 'excited' },
+      ghost: { squeeze: 'squeeze', dizzy: 'dizzy', pet: 'happy', excited: 'excited' },
+      blob: { squeeze: 'squeeze', dizzy: 'dizzy', pet: 'happy', excited: 'excited' },
+      cards: { squeeze: 'squeeze', dizzy: 'dizzy', pet: 'happy', excited: 'excited' },
+      moods: { squeeze: 'squeeze', dizzy: 'dizzy', pet: 'happy', excited: 'excited' },
+      bugs: { squeeze: 'squeeze', dizzy: 'dizzy', pet: 'happy', excited: 'excited' },
     };
     return map[this.family.id]?.[kind] ?? 'happy';
   }
