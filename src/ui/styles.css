@@ -103,10 +103,14 @@ button { font: inherit; color: inherit; }
   scrollbar-width: none;
 }
 .tabs::-webkit-scrollbar { display: none; }
+/* when the families outgrow the bar it scrolls; fade whichever edge has more */
+.tabs.fade-r { mask-image: linear-gradient(90deg, #000 calc(100% - 40px), transparent); }
+.tabs.fade-l { mask-image: linear-gradient(90deg, transparent, #000 40px); }
+.tabs.fade-l.fade-r { mask-image: linear-gradient(90deg, transparent, #000 40px, #000 calc(100% - 40px), transparent); }
 .tab {
   border: 0;
   background: transparent;
-  padding: 7px 14px;
+  padding: 7px 11px;
   border-radius: 999px;
   cursor: pointer;
   color: var(--muted);
@@ -116,14 +120,8 @@ button { font: inherit; color: inherit; }
 }
 .tab:hover { color: var(--text); }
 .tab[aria-selected='true'] { background: var(--panel); color: var(--text); box-shadow: var(--shadow); }
-.tab small { font-weight: 450; opacity: 0.6; margin-left: 4px; }
+.tab small { display: none; }   /* makers show on the cards, the studio header and the tooltip */
 .tab .short { display: none; }
-/* Nine tabs with sublabels need ~1600px; below that keep the names, drop the sublabels. */
-@media (max-width: 1640px) {
-  .tabs { min-width: 0; }
-  .tab { padding: 7px 12px; }
-  .tab small { display: none; }
-}
 .top-actions { display: flex; gap: 6px; align-items: center; }
 .icon-btn {
   display: inline-flex;

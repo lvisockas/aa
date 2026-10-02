@@ -154,19 +154,19 @@ export class App {
         <a class="brand" href="#all">${icons.spark}<span>Cute Agents</span></a>
         <nav class="tabs" role="tablist" aria-label="Families">
           <button class="tab" role="tab" data-route="home"><span class="long">Overview</span><span class="short">All</span></button>
-          <button class="tab" role="tab" data-route="dots">Dots<small>OpenAI</small></button>
-          <button class="tab" role="tab" data-route="grok"><span class="long">Grok Bot</span><span class="short">Grok</span><small>xAI</small></button>
-          <button class="tab" role="tab" data-route="muse">Muse<small>Meta</small></button>
-          <button class="tab" role="tab" data-route="rebel">Rebels<small>RebelMouse</small></button>
-          <button class="tab" role="tab" data-route="poly"><span class="long">Polydots</span><span class="short">Poly</span><small>mash-up</small></button>
-          <button class="tab" role="tab" data-route="doodle"><span class="long">Doodles</span><span class="short">2D</span><small>2D</small></button>
-          <button class="tab" role="tab" data-route="clawd">Clawd<small>Claude Code</small></button>
-          <button class="tab" role="tab" data-route="faces">Faces<small>Notion-style</small></button>
-          <button class="tab" role="tab" data-route="ghost">Ghosts<small>Imaginary</small></button>
-          <button class="tab" role="tab" data-route="blob">Blobs<small>Jelly</small></button>
-          <button class="tab" role="tab" data-route="cards">Cards<small>Archetypes</small></button>
-          <button class="tab" role="tab" data-route="moods">Moods<small>Crayon</small></button>
-          <button class="tab" role="tab" data-route="bugs">Bugs<small>Marker</small></button>
+          <button class="tab" role="tab" data-route="dots" title="Dots · OpenAI">Dots<small>OpenAI</small></button>
+          <button class="tab" role="tab" data-route="grok" title="Grok Bot · xAI"><span class="long">Grok Bot</span><span class="short">Grok</span><small>xAI</small></button>
+          <button class="tab" role="tab" data-route="muse" title="Muse · Meta">Muse<small>Meta</small></button>
+          <button class="tab" role="tab" data-route="rebel" title="Rebels · RebelMouse">Rebels<small>RebelMouse</small></button>
+          <button class="tab" role="tab" data-route="poly" title="Polydots · mash-up"><span class="long">Polydots</span><span class="short">Poly</span><small>mash-up</small></button>
+          <button class="tab" role="tab" data-route="doodle" title="Doodles · 2D"><span class="long">Doodles</span><span class="short">2D</span><small>2D</small></button>
+          <button class="tab" role="tab" data-route="clawd" title="Clawd · Claude Code">Clawd<small>Claude Code</small></button>
+          <button class="tab" role="tab" data-route="faces" title="Faces · Notion-style">Faces<small>Notion-style</small></button>
+          <button class="tab" role="tab" data-route="ghost" title="Ghosts · Imaginary">Ghosts<small>Imaginary</small></button>
+          <button class="tab" role="tab" data-route="blob" title="Blobs · Jelly">Blobs<small>Jelly</small></button>
+          <button class="tab" role="tab" data-route="cards" title="Cards · Archetypes">Cards<small>Archetypes</small></button>
+          <button class="tab" role="tab" data-route="moods" title="Moods · Crayon">Moods<small>Crayon</small></button>
+          <button class="tab" role="tab" data-route="bugs" title="Bugs · Marker">Bugs<small>Marker</small></button>
         </nav>
         <div class="top-actions">
           <div class="menu" id="settings">
@@ -200,6 +200,15 @@ export class App {
         location.hash = b.dataset.route === 'home' ? '#all' : `#${b.dataset.route}`;
       }),
     );
+    // the bar scrolls once the families outgrow it: fade the edge that has more tabs behind it
+    const bar = root.querySelector<HTMLElement>('.tabs')!;
+    const fade = () => {
+      bar.classList.toggle('fade-l', bar.scrollLeft > 2);
+      bar.classList.toggle('fade-r', bar.scrollLeft + bar.clientWidth < bar.scrollWidth - 2);
+    };
+    bar.addEventListener('scroll', fade, { passive: true });
+    window.addEventListener('resize', fade);
+    requestAnimationFrame(fade);
     const menu = root.querySelector<HTMLElement>('#settings')!;
     menu.querySelector('button')!.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -271,6 +280,7 @@ export class App {
       const r = sel.getBoundingClientRect(), b = bar.getBoundingClientRect();
       if (r.left < b.left) bar.scrollLeft -= b.left - r.left + 6;
       else if (r.right > b.right) bar.scrollLeft += r.right - b.right + 6;
+      bar.dispatchEvent(new Event('scroll'));
     }
     this.stages = [];
     this.studio = null;
@@ -302,7 +312,7 @@ export class App {
       <section class="overview">
         <div class="hero">
           <h1>Why AI agents are getting cute</h1>
-          <p>OpenAI Dots, Grok Bot, Meta Muse and the RebelMouse crew, rebuilt as live 3D characters, plus a low-poly Dots × RebelMouse mash-up, five 2D doodles, Claude Code’s terminal crab and Notion-style faces. Move your cursor and they'll watch you. Click to boop, hold to squish, drag to pet.</p>
+          <p>OpenAI Dots, Grok Bot, Meta Muse and the RebelMouse crew, rebuilt as live 3D characters, plus a low-poly Dots × RebelMouse mash-up, five 2D doodles, Claude Code’s terminal crab, Notion-style faces and a 2D sketchbook of ghost friends, jelly blobs, character cards, crayon moods and marker bugs. Move your cursor and they'll watch you. Click to boop, hold to squish, drag to pet.</p>
         </div>
         <div class="cards">
           ${ORDER.map((id) => {

@@ -4,3 +4,4 @@ shots/
 *.log
 dist/debug.html
 dist/artifact.html
+.claude/worktrees/
