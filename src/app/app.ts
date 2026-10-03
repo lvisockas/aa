@@ -52,7 +52,7 @@ const DEMO: Record<FamilyId, Array<[string, number]>> = {
   doodle: [['listening', 1.8], ['thinking', 2.4], ['working', 3.0], ['speaking', 2.4], ['happy', 2.6], ['idle', 0]],
   clawd: [['listening', 2.2], ['thinking', 2.6], ['working', 4.0], ['awaiting', 2.6], ['done', 2.6], ['idle', 0]],
   faces: [['listening', 2.0], ['thinking', 2.6], ['writing', 3.4], ['speaking', 2.6], ['done', 2.6], ['idle', 0]],
-  pet: [['listening', 2.0], ['thinking', 2.6], ['working', 3.2], ['speaking', 2.6], ['done', 2.6], ['idle', 0]],
+  pet: [['hatching', 3.2], ['listening', 1.8], ['working', 3.2], ['speaking', 2.4], ['done', 3.0], ['idle', 0]],
   ghost: [['listening', 2.0], ['thinking', 2.6], ['working', 3.2], ['speaking', 2.6], ['done', 2.6], ['idle', 0]],
   blob: [['listening', 2.0], ['thinking', 2.6], ['working', 3.2], ['speaking', 2.6], ['done', 2.6], ['idle', 0]],
   cards: [['listening', 2.0], ['thinking', 2.6], ['working', 3.2], ['speaking', 2.6], ['done', 2.6], ['idle', 0]],
