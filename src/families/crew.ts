@@ -1,206 +1,257 @@
-// STUB copied from grok.ts: to be replaced by the full family.
 import shader from '../shaders/crew.glsl';
-import { deg, hexToLinear, normalize, relLuminance, type Vec3 } from '../engine/math';
+import { clamp, deg, hexToLinear, lerp, normalize, smoothstep, type Vec3 } from '../engine/math';
 import type { Avatar, Pose } from '../avatar/avatar';
 import type { CharFrame } from '../engine/renderer';
-import type { BaseConfig, EyeSpec, FaceTarget, FamilyDef, Option, Placement } from './types';
+import type { BaseConfig, FaceTarget, FamilyDef, Option } from './types';
 import { groupPhoto, soloCamera } from './compose';
 
+/**
+ * Crew: bean-shaped space crewmates in satin vinyl. There is no face: the
+ * glossy visor slides around the bean to look at you, its highlight follows
+ * the gaze, and its shape (squint, tilt, happy arch) carries the expression.
+ */
 export interface CrewConfig extends BaseConfig {
-  shape: number;
-  sides: number;
-  roundness: number;
-  aspect: number;
-  bulge: number;
-  waves: number;
-  waveCount: number;
-  tilt: number;
-  thickness: number;
-  inflate: number;
   color: string;
-  material: string;
-  eyeSize: number;
-  eyeSpacing: number;
-  eyeHeight: number;
-  eyeTilt: number;
-  eyeColor: string;
-  /** previous silhouette while a shape morph is running */
-  _from?: { shape: number; sides: number; roundness: number; aspect: number };
+  visor: string;
+  visorSize: number;
+  backpack: string;
+  hat: string;
+  hatColor: string;
+  sticker: string;
+  pet: string;
+  petColor: string;
 }
 
-export const GROK_SHAPES: Option[] = [
-  { value: 0, label: 'Circle', icon: 'M12 3a9 9 0 1 1 0 18a9 9 0 1 1 0-18z' },
-  { value: 1, label: 'Oval', icon: 'M12 6c6 0 10 2.7 10 6s-4 6-10 6S2 15.3 2 12s4-6 10-6z' },
-  { value: 2, label: 'Rounded square', icon: 'M8 3h8a5 5 0 0 1 5 5v8a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5V8a5 5 0 0 1 5-5z' },
-  { value: 3, label: 'Pill', icon: 'M8 6h8a6 6 0 0 1 0 12H8A6 6 0 0 1 8 6z' },
-  { value: 4, label: 'Triangle', icon: 'M10.3 4.2a2 2 0 0 1 3.4 0l7.6 13a2 2 0 0 1-1.7 3H4.4a2 2 0 0 1-1.7-3z' },
-  { value: 5, label: 'Hexagon', icon: 'M7.5 3.5h9L21 12l-4.5 8.5h-9L3 12z' },
-  { value: 6, label: 'Cloud', icon: 'M7 19a4.5 4.5 0 0 1-.6-9A5.5 5.5 0 0 1 17 8.5a4.5 4.5 0 0 1 .5 10.5z' },
-  { value: 7, label: 'Teardrop', icon: 'M12 2.5c3 4.5 7 8 7 12a7 7 0 0 1-14 0c0-4 4-7.5 7-12z' },
-  { value: 8, label: 'Polygon', icon: 'M12 2.5l9 6.5-3.4 10.5H6.4L3 9z' },
+export const CREW_COLORS = [
+  '#D7262B', '#2347D8', '#1E8F3E', '#EE5DB8', '#F28A1C', '#F4E04D',
+  '#3A4048', '#E4E9F2', '#7240C4', '#7A5230', '#3EE6D4', '#6EE046',
 ];
 
-export const GROK_COLORS = [
-  '#EE7330', '#F2A03D', '#F5C518', '#3CBF6B', '#4DB8A4', '#3B82F6',
-  '#8B5CF6', '#EC4899', '#EF4444', '#8B6B4A', '#6B7280', '#141414',
+const HAT_COLORS = ['#F4C430', '#E8424F', '#3B82F6', '#22B07D', '#A855F7', '#F2F2F2', '#1F2937', '#F28A1C'];
+
+const VISORS: Option[] = [
+  { value: 'cyan', label: 'Cyan' },
+  { value: 'gold', label: 'Gold' },
+  { value: 'mirror', label: 'Mirror' },
+  { value: 'dark', label: 'Smoke' },
+];
+const TINTS: Record<string, string> = { cyan: '#A6E3F2', gold: '#F2C45A', mirror: '#C9CED6', dark: '#2A3550' };
+
+const HATS: Option[] = [
+  { value: 'none', label: 'None' },
+  { value: 'party', label: 'Party hat' },
+  { value: 'tophat', label: 'Top hat' },
+  { value: 'sprout', label: 'Sprout' },
+  { value: 'beanie', label: 'Beanie' },
+  { value: 'crown', label: 'Crown' },
+  { value: 'egg', label: 'Egg shell' },
+  { value: 'chef', label: 'Chef hat' },
+  { value: 'halo', label: 'Halo' },
+];
+/** default jaunty tilt per hat */
+const HAT_TILT: Record<string, number> = { party: 0.2, tophat: -0.12, sprout: 0.1, beanie: 0.05, crown: -0.08, egg: 0.12, chef: 0, halo: 0.05 };
+const COLOURED_HATS = ['party', 'tophat', 'beanie'];
+
+const PACKS: Option[] = [
+  { value: 'standard', label: 'Backpack' },
+  { value: 'jetpack', label: 'Jetpack' },
+  { value: 'none', label: 'None' },
+];
+
+const STICKERS: Option[] = [
+  { value: 'none', label: 'None' },
+  { value: 'star', label: 'Star' },
+  { value: 'heart', label: 'Heart' },
+  { value: 'sus', label: 'Side-eye' },
+  { value: 'plus', label: 'Medic' },
+];
+
+const PETS: Option[] = [
+  { value: 'none', label: 'None' },
+  { value: 'mini', label: 'Mini crewmate' },
+  { value: 'bot', label: 'Robot buddy' },
 ];
 
 const EXPRESSIONS: Option[] = [
   { value: 'neutral', label: 'Neutral' },
   { value: 'happy', label: 'Happy' },
-  { value: 'wink', label: 'Wink' },
-  { value: 'sleepy', label: 'Sleepy' },
+  { value: 'laugh', label: 'Laugh' },
   { value: 'surprised', label: 'Surprised' },
-  { value: 'curious', label: 'Curious' },
+  { value: 'suspicious', label: 'Suspicious' },
+  { value: 'confused', label: 'Confused' },
   { value: 'focused', label: 'Focused' },
   { value: 'determined', label: 'Determined' },
   { value: 'sad', label: 'Sad' },
-  { value: 'angry', label: 'Grumpy' },
+  { value: 'sleepy', label: 'Sleepy' },
   { value: 'love', label: 'Love' },
   { value: 'starstruck', label: 'Starstruck' },
   { value: 'dizzy', label: 'Dizzy' },
-  { value: 'laugh', label: 'Laugh' },
-  { value: 'skeptical', label: 'Skeptical' },
-  { value: 'error', label: 'Error' },
+  { value: 'alarmed', label: 'Alarmed' },
 ];
 
-// eye kinds understood by the shader
-const PILL = 0, OVAL = 1, ARC = 2, LINE = 3, X = 4, CHEVRON = 5, HEART = 6, STAR = 7, SPIRAL = 8;
+// highlight kinds understood by the shader
+const HL = 0, HEART = 1, STAR = 2, SPIRAL = 3;
 
-const eye = (kind: number, w: number, h: number, o: Partial<EyeSpec> = {}): EyeSpec => ({
-  kind, w, h, rot: 0, lid: 0, lidAng: 0, dx: 0, dy: 0, ...o,
+interface VisorSpec {
+  kind?: number;
+  /** visor width / height scale, tilt, top lid (0..0.5) and its angle, offset */
+  w?: number;
+  h?: number;
+  rot?: number;
+  lid?: number;
+  lidAng?: number;
+  dx?: number;
+  dy?: number;
+  /** highlight size, offset (-1..1), rotation, dimming */
+  hw?: number;
+  hh?: number;
+  hx?: number;
+  hy?: number;
+  hrot?: number;
+  dim?: number;
+  /** bottom lid, happy arch, inner glow, blush */
+  bot?: number;
+  arch?: number;
+  glow?: number;
+  blush?: number;
+}
+
+// The shared FaceTarget is reused as a visor description: l = visor shape, r = highlight.
+const visor = (o: VisorSpec): FaceTarget => ({
+  l: { kind: o.kind ?? HL, w: o.w ?? 1, h: o.h ?? 1, rot: o.rot ?? 0, lid: o.lid ?? 0, lidAng: o.lidAng ?? 0, dx: o.dx ?? 0, dy: o.dy ?? 0 },
+  r: { kind: o.kind ?? HL, w: o.hw ?? 1, h: o.hh ?? 1, rot: o.hrot ?? 0, lid: o.dim ?? 0, lidAng: 0, dx: o.hx ?? 0, dy: o.hy ?? 0 },
+  lidB: o.bot ?? 0,
+  mouth: o.arch ?? 0,
+  mouthOpen: o.glow ?? 0,
+  cheeks: o.blush ?? 0,
 });
 
-const both = (l: EyeSpec, r: EyeSpec = { ...l }, lidB = 0): FaceTarget => ({
-  l, r, lidB, mouth: 0, mouthOpen: 0, cheeks: 0,
-});
-
-const crewFace = (c: CrewConfig, expr: string): FaceTarget => {
-  // positive slant leans the top of the slits to the right, as in the reference pile
-  const tilt = -deg(c.eyeTilt);
-  const pill = (o: Partial<EyeSpec> = {}) => eye(PILL, 0.085, 0.2, { rot: tilt, ...o });
+const crewFace = (_c: CrewConfig, expr: string): FaceTarget => {
   switch (expr) {
     case 'happy':
-      return both(eye(ARC, 0.05, 0.17, { dy: 0.01 }));
-    case 'wink':
-      return both(pill(), eye(ARC, 0.05, 0.17, { dy: 0.01 }));
-    case 'sleepy':
-      return both(eye(LINE, 0.045, 0.15, { dy: -0.025, rot: 0.08 }), eye(LINE, 0.045, 0.15, { dy: -0.025, rot: -0.08 }));
-    case 'surprised':
-      return both(eye(OVAL, 0.12, 0.23, { dy: 0.01 }));
-    case 'curious':
-      return both(pill({ h: 0.22, rot: tilt + 0.1 }), pill({ h: 0.16, rot: tilt + 0.1, dy: 0.012 }));
-    case 'focused':
-      return both(pill({ w: 0.09, h: 0.18, lid: 0.3 }));
-    case 'determined':
-      return both(pill({ w: 0.09, h: 0.19, lid: 0.32, lidAng: 0.42 }), pill({ w: 0.09, h: 0.19, lid: 0.32, lidAng: -0.42 }));
-    case 'sad':
-      return both(
-        pill({ w: 0.08, h: 0.17, lid: 0.3, lidAng: -0.5, dy: -0.015 }),
-        pill({ w: 0.08, h: 0.17, lid: 0.3, lidAng: 0.5, dy: -0.015 }),
-      );
-    case 'angry':
-      return both(pill({ w: 0.09, h: 0.18, lid: 0.46, lidAng: 0.62 }), pill({ w: 0.09, h: 0.18, lid: 0.46, lidAng: -0.62 }));
-    case 'love':
-      return both(eye(HEART, 0.0, 0.17, { dy: 0.005 }));
-    case 'starstruck':
-      return both(eye(STAR, 0.0, 0.22));
-    case 'dizzy':
-      return both(eye(SPIRAL, 0.03, 0.2));
+      return visor({ arch: 0.68, hh: 1.1, hy: 0.25 });
     case 'laugh':
-      return both(eye(CHEVRON, 0.045, 0.16), eye(CHEVRON, 0.045, 0.16, { rot: Math.PI }));
-    case 'skeptical':
-      return both(pill({ lid: 0.45 }), pill({ h: 0.22, rot: tilt - 0.12 }));
-    case 'error':
-      return both(eye(X, 0.042, 0.16));
+      return visor({ arch: 0.8, h: 1.05, w: 1.04, hw: 1.1, hy: 0.35 });
+    case 'squeeze':
+      return visor({ w: 1.1, h: 0.72, arch: 0.7, lid: 0.08, hw: 1.15, hh: 0.8 });
+    case 'surprised':
+      return visor({ h: 1.34, w: 0.92, hw: 0.75, hh: 1.5, hy: 0.25 });
+    case 'alarmed':
+      return visor({ h: 1.3, w: 0.95, hw: 0.55, hh: 1.1, hy: 0.1, glow: 0.25 });
+    case 'suspicious':
+      return visor({ h: 0.62, lid: 0.16, lidAng: 0.16, hx: 0.6, hw: 0.75, hh: 0.75, dy: 0.008 });
+    case 'confused':
+      return visor({ rot: 0.2, lid: 0.16, lidAng: -0.35, hw: 0.85, hy: 0.3, hx: -0.2 });
+    case 'thinking':
+      return visor({ rot: 0.16, lid: 0.1, lidAng: -0.3, hy: 0.5, hx: 0.35, hw: 0.9 });
+    case 'focused':
+      return visor({ lid: 0.26, h: 0.88, hw: 1.15, hh: 0.8, hy: -0.2 });
+    case 'determined':
+      return visor({ lid: 0.3, lidAng: 0.32, hw: 1.1, hh: 0.85 });
+    case 'sad':
+      return visor({ lid: 0.24, lidAng: -0.3, dy: -0.012, hy: -0.5, dim: 0.25, h: 0.95 });
+    case 'sleepy':
+      return visor({ lid: 0.42, h: 0.85, dim: 0.45, hy: -0.4, rot: -0.06 });
+    case 'love':
+      return visor({ kind: HEART, blush: 0.75, arch: 0.25, hw: 1.0 });
+    case 'starstruck':
+      return visor({ kind: STAR, h: 1.15, glow: 0.25 });
+    case 'dizzy':
+      return visor({ kind: SPIRAL, rot: 0.12, h: 1.05 });
+    case 'listening':
+      return visor({ h: 1.08, rot: -0.08, hw: 1.1, hh: 1.1, hy: 0.15 });
     default:
-      return both(pill());
+      return visor({});
   }
 };
 
 const base = (o: Partial<CrewConfig>): CrewConfig => ({
-  name: 'Crew',
+  name: 'Crewmate',
   state: 'idle',
   expression: 'neutral',
-  shape: 0,
-  sides: 5,
-  roundness: 0.6,
-  aspect: 1,
-  bulge: 0,
-  waves: 0,
-  waveCount: 6,
-  tilt: 0,
-  thickness: 0.2,
-  inflate: 0.05,
-  color: '#EE7330',
-  material: 'soft',
-  eyeSize: 1,
-  eyeSpacing: 1,
-  eyeHeight: 0.02,
-  eyeTilt: 0,
-  eyeColor: 'auto',
+  color: '#D7262B',
+  visor: 'cyan',
+  visorSize: 1,
+  backpack: 'standard',
+  hat: 'none',
+  hatColor: '#F4C430',
+  sticker: 'none',
+  pet: 'none',
+  petColor: '#3EE6D4',
   ...o,
 });
 
-// Composition after the reference pile (9 bots resting on each other).
-const PILE: Placement[] = [
-  { pos: [-1.92, 0.0, 0.18], scale: 1.03, yaw: 0.06 },
-  { pos: [-1.36, 0.82, -0.12], scale: 0.98, yaw: 0.0 },
-  { pos: [-0.34, 0.82, -0.12], scale: 0.95, yaw: -0.05 },
-  { pos: [0.48, 1.44, -0.3], scale: 0.85, yaw: 0.05 },
-  { pos: [-0.84, 0.0, 0.2], scale: 1.1, yaw: 0.03 },
-  { pos: [0.33, 0.02, 0.22], scale: 1.13, yaw: -0.03 },
-  { pos: [1.16, 0.62, -0.1], scale: 0.97, yaw: -0.06 },
-  { pos: [1.14, 0.02, 0.32], scale: 0.56, yaw: 0.0 },
-  { pos: [1.94, 0.02, 0.16], scale: 0.98, yaw: -0.08 },
-];
+const idx = (list: Option[], v: string) => Math.max(0, list.findIndex((o) => o.value === v));
+
+// props positions mirrored from the shader
+const PANEL: Vec3 = [0.52, 0.58, 0.22];
+const PANEL_X: Vec3 = [Math.cos(0.5), 0, Math.sin(0.5)];
+const PANEL_N: Vec3 = [-Math.sin(0.5), 0, Math.cos(0.5)];
+const SHOULDER: Vec3 = [0.245, 0.46, 0.03];
+
+/** smallest-ish sphere around a set of spheres (x, y, z, r) */
+const enclose = (s: Array<[number, number, number, number]>): { c: Vec3; r: number } => {
+  const lo = [1e9, 1e9, 1e9], hi = [-1e9, -1e9, -1e9];
+  for (const [x, y, z, r] of s) {
+    [x, y, z].forEach((v, i) => {
+      lo[i] = Math.min(lo[i], v - r);
+      hi[i] = Math.max(hi[i], v + r);
+    });
+  }
+  const c: Vec3 = [(lo[0] + hi[0]) / 2, (lo[1] + hi[1]) / 2, (lo[2] + hi[2]) / 2];
+  let r = 0;
+  for (const [x, y, z, rr] of s) r = Math.max(r, Math.hypot(x - c[0], y - c[1], z - c[2]) + rr);
+  return { c, r };
+};
 
 export const crew: FamilyDef<CrewConfig> = {
   id: 'crew',
-  name: 'Grok Bot',
+  name: 'Crew',
   maker: 'Space impostors',
-  tagline: 'Simple geometric forms · near-infinite shape variations · motion-based state expression',
+  tagline: 'Bean-suit space crewmates · a visor that looks back · body-language states',
   shader,
   anchors: 0,
-  background: '#F3F4F6',
-  dark: false,
-  traits: ['Simple geometric forms', 'Near-infinite shape variations', 'Motion-based state expression'],
+  background: 'radial-gradient(120% 95% at 50% 22%, #22305A 0%, #141D3A 55%, #0B1124 100%)',
+  backgroundSolid: '#141D3A',
+  dark: true,
+  traits: ['Satin bean suits, glossy visors', 'Emotes through the visor', 'Hats, pets & little ship tasks'],
   look: {
-    dark: false,
-    groundShadow: 0.3,
-    exposure: 1.0,
+    dark: true,
+    groundShadow: 0.45,
+    exposure: 1.05,
     groundY: 0,
     lights: {
-      key: normalize([-0.45, 0.78, 0.62]),
-      keyI: 1.0,
-      rim: normalize([0.55, 0.45, -0.7]),
-      rimI: 0.7,
-      fill: normalize([0.75, 0.1, 0.65]),
-      fillI: 0.22,
-      sky: [0.42, 0.43, 0.46],
-      ground: [0.2, 0.195, 0.19],
-      warm: [1.0, 0.97, 0.93],
-      env: 0.9,
+      key: normalize([-0.5, 0.75, 0.62]),
+      keyI: 1.05,
+      rim: normalize([0.6, 0.4, -0.7]),
+      rimI: 1.0,
+      fill: normalize([0.8, 0.05, 0.6]),
+      fillI: 0.28,
+      sky: [0.3, 0.34, 0.46],
+      ground: [0.07, 0.07, 0.11],
+      warm: [1.0, 0.96, 0.9],
+      env: 1.0,
     },
   },
   defaultState: 'idle',
   states: {
-    idle: { label: 'Idle', hint: 'Calm and slightly curious', bob: [0.01, 0.4], squash: [0.012, 0.4] },
-    thinking: { label: 'Thinking', hint: 'Looks up while the dots pulse', expr: 'curious', gaze: 'up', props: { dots: 1 }, bob: [0.012, 0.6], sway: [0.05, 0.35] },
-    working: { label: 'Working', hint: 'Kicks into gear', expr: 'focused', bob: [0.05, 2.1], squash: [0.065, 2.1], lean: 0.07, enter: 'nod' },
-    waiting: { label: 'Waiting', hint: 'Patient sway, glancing at you', expr: 'neutral', gaze: 'user', sway: [0.06, 0.45], bob: [0.008, 0.45] },
-    blocked: { label: 'Needs help', hint: 'Shakes and asks for input', expr: 'sad', shake: 0.09, enter: 'shake', emote: ['question', 2.4] },
-    done: { label: 'Done', hint: 'Celebrates, then settles', expr: 'happy', enter: 'celebrate', bob: [0.01, 0.5], emote: ['check', 3.6] },
-    orbit: { label: 'Long task', hint: 'Rings orbit during long-running work', expr: 'focused', props: { rings: 1 }, bob: [0.015, 0.8] },
-    paused: { label: 'Paused', hint: 'Dozes until it is needed', expr: 'sleepy', gaze: 'closed', squash: [0.035, 0.25], sink: 0.02, emote: ['zzz', 2.8] },
+    idle: { label: 'Idle', hint: 'Gentle bob and a side-to-side waddle', bob: [0.012, 0.9], sway: [0.05, 0.45], props: { waddle: 1 } },
+    listening: { label: 'Listening', hint: 'Turns its visor to you and leans in', expr: 'listening', gaze: 'user', lean: 0.06, bob: [0.006, 0.5], squash: [0.012, 0.5], enter: 'nod' },
+    thinking: { label: 'Thinking', hint: 'Tilted visor, gazing up, wondering', expr: 'thinking', gaze: 'up', sway: [0.04, 0.3], bob: [0.008, 0.4], emote: ['question', 2.6] },
+    working: { label: 'Working', hint: 'Fixes wires on a floating task panel', expr: 'focused', arms: 'type', props: { panel: 1 }, bob: [0.012, 1.6], lean: 0.04, enter: 'nod' },
+    speaking: { label: 'Speaking', hint: 'Bounces along, visor glowing as it talks', expr: 'neutral', talk: 1, gaze: 'user', bob: [0.018, 1.3], squash: [0.02, 2.6] },
+    done: { label: 'Done', hint: 'Celebration hop and spin, nubs up', expr: 'happy', arms: 'cheer', enter: 'celebrate', bob: [0.02, 1.2], emote: ['star', 3.2] },
+    sleeping: { label: 'Sleeping', hint: 'Slumped over, visor dark, snoozing', expr: 'sleepy', gaze: 'closed', lean: 0.13, sink: 0.02, squash: [0.03, 0.22], bob: [0.004, 0.22], props: { dark: 1 }, emote: ['zzz', 2.6] },
+    suspicious: { label: 'Suspicious', hint: 'Side-eye, slow lean, glancing left and right', expr: 'suspicious', sway: [0.07, 0.16], bob: [0.004, 0.3], props: { sus: 1 }, emote: ['sweat', 3.0] },
+    emergency: { label: 'Emergency', hint: 'Bonks the big red button, alarm flashing', expr: 'alarmed', props: { button: 1, alarm: 1 }, bob: [0.025, 2.2], enter: 'hop', emote: ['bang', 2.4] },
   },
   personality: {
-    body: [2.1, 0.5, 1.4],
-    eyes: [5.0, 0.75, 0.0],
-    squash: [320, 8.5],
-    reach: [0.5, 0.32],
+    body: [2.3, 0.45, 1.3],
+    eyes: [5.5, 0.7, 0.0],
+    squash: [300, 8],
+    reach: [0.42, 0.25],
     eyeShare: 0.6,
-    hopGravity: 15,
+    hopGravity: 14,
   },
   expressions: EXPRESSIONS,
   schema: [
@@ -213,112 +264,73 @@ export const crew: FamilyDef<CrewConfig> = {
       ],
     },
     {
-      id: 'shape',
-      title: 'Shape',
+      id: 'suit',
+      title: 'Suit & visor',
       controls: [
-        { type: 'icons', key: 'shape', label: 'Silhouette', options: GROK_SHAPES },
-        { type: 'slider', key: 'sides', label: 'Polygon sides', min: 3, max: 10, step: 1, when: (c) => c.shape === 8 },
-        { type: 'slider', key: 'roundness', label: 'Corner roundness', min: 0, max: 1, step: 0.01 },
-        { type: 'slider', key: 'aspect', label: 'Width', min: 0.7, max: 1.45, step: 0.01 },
-        { type: 'slider', key: 'bulge', label: 'Bulge', min: 0, max: 1, step: 0.01 },
-        { type: 'slider', key: 'waves', label: 'Wobbly edge', min: 0, max: 0.06, step: 0.001 },
-        { type: 'slider', key: 'waveCount', label: 'Wobble count', min: 3, max: 12, step: 1, when: (c) => c.waves > 0.001 },
-        { type: 'slider', key: 'tilt', label: 'Tilt', min: -35, max: 35, step: 1, unit: '°' },
-        { type: 'slider', key: 'thickness', label: 'Depth', min: 0.1, max: 0.34, step: 0.01 },
-        { type: 'slider', key: 'inflate', label: 'Inflate', min: 0, max: 0.14, step: 0.005 },
-      ],
-    },
-    {
-      id: 'color',
-      title: 'Colour & material',
-      controls: [
-        { type: 'swatches', key: 'color', label: 'Colour', colors: GROK_COLORS, custom: true },
-        {
-          type: 'chips',
-          key: 'material',
-          label: 'Material',
-          options: [
-            { value: 'flat', label: 'Flat' },
-            { value: 'soft', label: 'Soft-touch' },
-            { value: 'clay', label: 'Clay' },
-            { value: 'gloss', label: 'Gloss' },
-          ],
-        },
-      ],
-    },
-    {
-      id: 'face',
-      title: 'Eyes',
-      controls: [
+        { type: 'swatches', key: 'color', label: 'Suit colour', colors: CREW_COLORS, custom: true },
+        { type: 'chips', key: 'visor', label: 'Visor tint', options: VISORS },
+        { type: 'slider', key: 'visorSize', label: 'Visor size', min: 0.85, max: 1.2, step: 0.01 },
         { type: 'select', key: 'expression', label: 'Expression', options: EXPRESSIONS },
-        { type: 'slider', key: 'eyeSize', label: 'Size', min: 0.6, max: 1.5, step: 0.01 },
-        { type: 'slider', key: 'eyeSpacing', label: 'Spacing', min: 0.6, max: 1.5, step: 0.01 },
-        { type: 'slider', key: 'eyeHeight', label: 'Height', min: -0.12, max: 0.16, step: 0.005 },
-        { type: 'slider', key: 'eyeTilt', label: 'Slant', min: -25, max: 25, step: 1, unit: '°' },
-        {
-          type: 'chips',
-          key: 'eyeColor',
-          label: 'Eye colour',
-          options: [
-            { value: 'auto', label: 'Auto' },
-            { value: 'white', label: 'White' },
-            { value: 'ink', label: 'Ink' },
-          ],
-        },
+      ],
+    },
+    {
+      id: 'gear',
+      title: 'Gear',
+      controls: [
+        { type: 'select', key: 'hat', label: 'Hat', options: HATS },
+        { type: 'swatches', key: 'hatColor', label: 'Hat colour', colors: HAT_COLORS, custom: true, when: (c) => COLOURED_HATS.includes(c.hat) },
+        { type: 'chips', key: 'backpack', label: 'Backpack', options: PACKS },
+        { type: 'chips', key: 'sticker', label: 'Sticker', options: STICKERS },
+      ],
+    },
+    {
+      id: 'pet',
+      title: 'Companion',
+      controls: [
+        { type: 'chips', key: 'pet', label: 'Pet', options: PETS },
+        { type: 'swatches', key: 'petColor', label: 'Pet colour', colors: CREW_COLORS, custom: true, when: (c) => c.pet !== 'none' },
       ],
     },
   ],
   roster: () => [
-    base({ name: 'Ember', shape: 0, color: '#EE7330', eyeTilt: 14, expression: 'neutral' }),
-    base({ name: 'Onyx', shape: 0, color: '#141414', eyeTilt: 18, material: 'gloss' }),
-    base({ name: 'Tide', shape: 2, color: '#4DB8A4', roundness: 0.75, tilt: -6 }),
-    base({ name: 'Iris', shape: 2, color: '#8B5CF6', roundness: 0.85, tilt: 22, eyeSize: 0.75, expression: 'curious' }),
-    base({ name: 'Puff', shape: 6, color: '#F2A03D', aspect: 1.05, eyeTilt: 8 }),
-    base({ name: 'Peak', shape: 4, color: '#EC4899', roundness: 0.9, eyeSize: 0.8, eyeHeight: -0.04 }),
-    base({ name: 'Cobalt', shape: 2, color: '#3B82F6', roundness: 0.55, tilt: -14, expression: 'surprised', eyeSize: 0.85 }),
-    base({ name: 'Drip', shape: 7, color: '#6B7280', tilt: 32, eyeSize: 0.8, eyeHeight: -0.06, expression: 'surprised' }),
-    base({ name: 'Cocoa', shape: 0, color: '#8B6B4A', eyeTilt: 16, eyeSize: 1.25 }),
+    base({ name: 'Mochi', color: '#EE5DB8', hat: 'party', hatColor: '#F4C430', sticker: 'heart', expression: 'happy' }),
+    base({ name: 'Comet', color: '#2347D8', visor: 'gold', hat: 'beanie', hatColor: '#F28A1C', backpack: 'jetpack' }),
+    base({ name: 'Pepper', color: '#D7262B', hat: 'sprout', pet: 'mini', petColor: '#3EE6D4' }),
+    base({ name: 'Jinx', color: '#3A4048', visor: 'mirror', hat: 'tophat', hatColor: '#7240C4', sticker: 'sus', expression: 'suspicious' }),
+    base({ name: 'Nimbus', color: '#E4E9F2', hat: 'halo', pet: 'bot', petColor: '#6EE046', sticker: 'star' }),
   ],
-  randomize: (c, rnd) => ({
-    ...c,
-    shape: Math.floor(rnd() * GROK_SHAPES.length),
-    sides: 3 + Math.floor(rnd() * 6),
-    roundness: 0.3 + rnd() * 0.7,
-    aspect: 0.85 + rnd() * 0.35,
-    bulge: rnd() < 0.3 ? rnd() * 0.5 : 0,
-    waves: rnd() < 0.2 ? rnd() * 0.035 : 0,
-    tilt: Math.round((rnd() - 0.5) * 40),
-    color: GROK_COLORS[Math.floor(rnd() * GROK_COLORS.length)],
-    material: ['flat', 'soft', 'soft', 'clay', 'gloss'][Math.floor(rnd() * 5)],
-    expression: EXPRESSIONS[Math.floor(rnd() * 8)].value as string,
-    eyeSize: 0.75 + rnd() * 0.5,
-    eyeSpacing: 0.8 + rnd() * 0.4,
-    eyeTilt: Math.round((rnd() - 0.5) * 30),
-  }),
-  compose: (n, aspect, compact) => {
-    if (n <= PILE.length && aspect >= 1.05 && !compact) {
-      // the signature pile, framed near-orthographically
-      const fov = deg(18);
-      const w = 5.5, h = 2.85;
-      const halfH = Math.max(h / 2, w / 2 / aspect);
-      const dist = halfH / Math.tan(fov / 2);
-      return { placements: PILE.slice(0, n), camera: { pos: [0.02, 1.12 + halfH * 0.12, dist], target: [0.02, 1.12, 0], fov } };
-    }
-    if (n <= PILE.length && compact && aspect >= 0.9) {
-      const fov = deg(18);
-      const w = 5.3, h = 2.8;
-      const halfH = Math.max(h / 2, w / 2 / aspect);
-      const dist = halfH / Math.tan(fov / 2);
-      return { placements: PILE.slice(0, n), camera: { pos: [0.02, 1.1 + halfH * 0.12, dist], target: [0.02, 1.1, 0], fov } };
-    }
-    return groupPhoto(n, aspect, { gap: 1.15, charW: 1.05, charH: 1.0, riser: 0.62, depth: 0.5, fov: deg(18), margin: 0.12, turn: 0.02, lift: 0.1 });
+  randomize: (c, rnd) => {
+    const pick = <T>(a: T[]) => a[Math.floor(rnd() * a.length)];
+    return {
+      ...c,
+      color: pick(CREW_COLORS),
+      visor: rnd() < 0.55 ? 'cyan' : (pick(VISORS).value as string),
+      visorSize: Math.round((0.92 + rnd() * 0.18) * 100) / 100,
+      backpack: rnd() < 0.7 ? 'standard' : (pick(PACKS).value as string),
+      hat: pick(HATS).value as string,
+      hatColor: pick(HAT_COLORS),
+      sticker: rnd() < 0.5 ? 'none' : (pick(STICKERS).value as string),
+      pet: rnd() < 0.75 ? 'none' : (pick(PETS.slice(1)).value as string),
+      petColor: pick(CREW_COLORS),
+      expression: pick(EXPRESSIONS.slice(0, 6)).value as string,
+    };
   },
-  solo: (aspect) => soloCamera(aspect, 1.15, 1.0, deg(18), 0.1),
-  subtitle: 'xAI · persistent agents with a geometric identity',
-  headLocal: () => [0, 0.55, 0.15],
+  compose: (n, aspect) =>
+    groupPhoto(n, aspect, { gap: 1.0, charW: 1.0, charH: 1.25, riser: 0.6, depth: 0.5, fov: deg(18), margin: 0.1, turn: 0.16, lift: 0.12 }),
+  solo: (aspect) => soloCamera(aspect, 1.3, 1.25, deg(18), 0.12),
+  subtitle: 'Original space-crew vinyl figures · the visor does the emoting',
+  headLocal: () => [0, 0.68, 0.2],
   bounds: (c) => {
-    const r = 0.64 * Math.max(c.aspect, 1) + 0.06;
-    return { c: [0, 0.5, 0], r: Math.max(r, 0.98), occ: [[0, 0.46, 0, 0.4]] };
+    const s: Array<[number, number, number, number]> = [[0, 0.5, -0.02, 0.57]];
+    if (c.hat !== 'none') s.push([0, 1.05, 0, 0.3]);
+    if (c.state === 'working') s.push([PANEL[0], PANEL[1], PANEL[2], 0.25]);
+    if (c.state === 'emergency') s.push([0.52, 0.2, 0.13, 0.24]);
+    if (c.pet === 'mini') s.push([-0.37, 0.2, 0.35, 0.24]);
+    if (c.pet === 'bot') s.push([-0.46, 0.83, 0.1, 0.15]);
+    const b = enclose(s);
+    const occ: Array<[number, number, number, number]> = [[0, 0.4, 0, 0.32]];
+    if (c.pet === 'mini') occ.push([-0.43, 0.12, 0.3, 0.1]);
+    return { c: b.c, r: b.r, occ };
   },
   face: crewFace,
   pack: (c: CrewConfig, pose: Pose, f: CharFrame, face: FaceTarget) => {
@@ -330,52 +342,116 @@ export const crew: FamilyDef<CrewConfig> = {
       d[k * 4 + 2] = cc;
       d[k * 4 + 3] = dd;
     };
-    const m = pose.morph;
-    const ease = m * m * (3 - 2 * m);
-    const from = c._from && m < 1 ? c._from : c;
-    set(0, from.shape, from.roundness, from.aspect, from.sides);
-    set(1, c.shape, c.roundness, c.aspect, c.sides);
-    set(2, m < 1 ? ease : 0, deg(c.tilt), c.thickness, c.inflate);
-    const col = hexToLinear(c.color);
-    const matIdx = ['flat', 'soft', 'clay', 'gloss'].indexOf(c.material);
-    set(3, col[0], col[1], col[2], Math.max(0, matIdx));
+    const ph = pose.phase;
+    const P = pose.props;
+    const sus = P.sus ?? 0, panel = P.panel ?? 0, button = P.button ?? 0, dark = P.dark ?? 0;
+    const alarm = P.alarm ?? 0, waddle = P.waddle ?? 0;
 
-    const size = c.eyeSize * (1 + 0.08 * pose.excite);
-    const sx = 0.125 * c.eyeSpacing;
-    const lookX = pose.lookX * 0.075;
-    const lookY = pose.lookY * 0.05;
-    const squeeze = 1 - 0.18 * Math.abs(pose.lookX);
+    const col = hexToLinear(c.color);
+    set(0, col[0], col[1], col[2], 0.32);
+    const tint = hexToLinear(TINTS[c.visor] ?? TINTS.cyan);
+    set(1, tint[0], tint[1], tint[2], idx(VISORS, c.visor));
+
+    // gaze: the visor slides around the bean, the highlight slides inside the visor
+    let lookX = pose.lookX, lookY = pose.lookY;
+    const glance = Math.tanh(Math.sin(ph * 1.4) * 3.5);
+    lookX = lerp(lookX, glance, sus);
+    lookX = lerp(lookX, 0.8, panel * 0.85);
+    lookY = lerp(lookY, -0.15, panel * 0.6);
+    lookX = lerp(lookX, 0.75, button * 0.7);
+    lookY = lerp(lookY, -0.45, button * 0.6);
+    const yaw = clamp(pose.headYaw * 0.5 + lookX * 0.14 + glance * sus * 0.12, -0.55, 0.55);
+    const vy = 0.655 + face.l.dy + clamp(-pose.headPitch * 0.04 + lookY * 0.008, -0.03, 0.03);
+    set(2, face.l.dx + lookX * 0.01, vy, yaw, face.l.rot + pose.headRoll * 0.3);
     const blink = pose.blink;
-    const packEye = (e: EyeSpec, side: number, kc: number, ka: number) => {
-      let w = e.w * size * squeeze;
-      let h = e.h * size;
-      if (e.kind === PILL || e.kind === OVAL) {
-        const closed = Math.max(w * 0.42, h * (1 - 0.92 * blink));
-        h = closed;
-        w *= 1 + 0.25 * blink;
-      } else {
-        h *= 1 - 0.5 * blink;
-      }
-      const cx = side * sx + e.dx + lookX;
-      const cy = c.eyeHeight + e.dy + lookY;
-      set(kc, cx, cy, w, h);
-      set(ka, e.rot, e.kind, e.lid, e.lidAng);
+    const vs = c.visorSize;
+    const talk = pose.talk;
+    set(3, face.l.w * vs, face.l.h * vs * (1 - 0.1 * blink) * (1 + 0.07 * talk), face.l.lid, face.l.lidAng);
+    set(4, face.mouth, face.lidB, face.mouthOpen + talk * 0.7, face.cheeks);
+    set(5, face.r.dx * 0.07 + lookX * 0.055, face.r.dy * 0.035 + lookY * 0.028, face.r.w * vs, face.r.h * vs * (1 - 0.9 * blink));
+    set(6, face.l.kind, clamp(face.r.lid + blink * 0.6 + dark * 0.85, 0, 1), face.r.rot, dark);
+
+    // hat
+    const hat = idx(HATS, c.hat);
+    set(7, hat, (HAT_TILT[c.hat] ?? 0) + pose.headRoll * 0.4, 0, 0);
+    const hc = hexToLinear(c.hatColor);
+    set(8, hc[0], hc[1], hc[2], 0);
+
+    // backpack; the jetpack fires while airborne
+    const pk = idx(PACKS, c.backpack);
+    const flame = pk === 1 ? clamp(pose.offset[1] * 6, 0, 1) : 0;
+    set(10, pk, flame, 0, 0);
+
+    // stubby legs: waddle steps, a foot tap while working, tucked in mid-air
+    const sw = Math.sin(ph * 0.45 * Math.PI * 2);
+    const air = clamp(pose.offset[1] * 0.4, 0, 0.035);
+    let lL = waddle * 0.03 * Math.max(0, -sw) + air + Math.max(0, -pose.roll) * 0.25;
+    let lR = waddle * 0.03 * Math.max(0, sw) + air + Math.max(0, pose.roll) * 0.25;
+    lL += panel * 0.022 * Math.max(0, Math.sin(ph * 7));
+    lR += button * 0.02 * Math.max(0, Math.sin(ph * 2.2 * Math.PI * 2));
+    lL = Math.min(lL, 0.06);
+    lR = Math.min(lR, 0.06);
+    const shuffle = waddle * 0.015 * sw;
+    set(11, lL, lR, shuffle, -shuffle);
+
+    // arm nubs from the shared arm pose, hidden while at rest
+    const nub = (side: number): [Vec3, number] => {
+      const a = pose.arms;
+      const raise = (side < 0 ? a.lRaise : a.rRaise) + (side > 0 ? a.wave * Math.sin(ph * 9) * 0.35 : 0);
+      const fwd = side < 0 ? a.lFwd : a.rFwd;
+      const bend = side < 0 ? a.lBend : a.rBend;
+      const dev = Math.abs(raise - 0.5) + Math.abs(fwd - 0.2) * 0.8 + Math.abs(bend - 0.3) * 0.3;
+      const amt = clamp(dev * 2.5, 0, 1);
+      const cf = Math.cos(-fwd), sf = Math.sin(-fwd);
+      const u: Vec3 = [side * Math.sin(raise), -Math.cos(raise) * cf, -Math.cos(raise) * sf];
+      const tapB = a.tap * Math.max(0, Math.sin(ph * 14 + (side > 0 ? 0 : Math.PI))) * 0.02;
+      const len = 0.17 * smoothstep(0, 1, amt);
+      return [[side * SHOULDER[0] + u[0] * len, SHOULDER[1] + u[1] * len + tapB, SHOULDER[2] + u[2] * len], amt];
     };
-    packEye(face.l, -1, 4, 6);
-    packEye(face.r, 1, 5, 7);
-    const ink = c.eyeColor === 'ink' || (c.eyeColor === 'auto' && relLuminance(c.color) > 0.5);
-    const ec: Vec3 = ink ? [0.012, 0.012, 0.014] : [0.96, 0.96, 0.95];
-    set(8, ec[0], ec[1], ec[2], face.lidB);
-    set(9, pose.poke[0], pose.poke[1], pose.poke[2], pose.pokeAmp);
-    set(10, pose.wobble * 1.4, pose.wobblePhase, 9, 0);
-    const rings = pose.props.rings ?? 0;
-    const dots = pose.props.dots ?? 0;
-    set(11, rings, pose.phase * 1.4, dots, pose.phase * 6.5);
-    set(12, c.bulge, c.waves, c.waveCount, pose.phase * 0.0);
-    set(13, 0.55, 0, 0, 0);
-    const rc = hexToLinear(c.color);
-    set(14, rc[0] * 0.55 + 0.25, rc[1] * 0.55 + 0.25, rc[2] * 0.55 + 0.25, 1);
+    const [tL, aL] = nub(-1);
+    let [tR, aR] = nub(1);
+    if (panel > 0.01) {
+      // poke the wires on the panel
+      const tap = 0.03 * Math.max(0, Math.sin(ph * 12));
+      const tgt: Vec3 = [
+        PANEL[0] - PANEL_X[0] * 0.135 + PANEL_N[0] * (0.03 + tap),
+        PANEL[1] + 0.015 * Math.sin(ph * 4),
+        PANEL[2] - PANEL_X[2] * 0.135 + PANEL_N[2] * (0.03 + tap),
+      ];
+      tR = [lerp(tR[0], tgt[0], panel), lerp(tR[1], tgt[1], panel), lerp(tR[2], tgt[2], panel)];
+      aR = Math.max(aR, panel);
+    }
+    let press = 0;
+    if (button > 0.01) {
+      // wind up, then bonk the big red button
+      const cyc = (ph * 1.1) % 1;
+      const slam = cyc < 0.62 ? 0 : cyc < 0.72 ? smoothstep(0.62, 0.72, cyc) : 1 - smoothstep(0.82, 1, cyc);
+      press = cyc > 0.7 && cyc < 0.86 ? 1 : 0;
+      const up: Vec3 = [0.4, 0.64, 0.13];
+      const down: Vec3 = [0.48, 0.46, 0.13];
+      const wind = cyc < 0.62 ? smoothstep(0, 0.5, cyc) : 1;
+      const raised: Vec3 = [lerp(0.42, up[0], wind), lerp(0.5, up[1], wind), up[2]];
+      const tgt: Vec3 = [lerp(raised[0], down[0], slam), lerp(raised[1], down[1], slam), lerp(raised[2], down[2], slam)];
+      tR = [lerp(tR[0], tgt[0], button), lerp(tR[1], tgt[1], button), lerp(tR[2], tgt[2], button)];
+      aR = Math.max(aR, button);
+      press *= button;
+    }
+    set(12, tL[0], tL[1], tL[2], aL);
+    set(13, tR[0], tR[1], tR[2], aR);
+
+    const strobe = alarm * Math.pow(0.5 + 0.5 * Math.sin(ph * 7), 2);
+    set(14, panel, button, press, strobe);
+    set(15, ph, (ph * 0.22) % 1, 0, 0);
+
+    const pet = idx(PETS, c.pet);
+    const hop = pet === 1 ? Math.abs(Math.sin(ph * 3.1)) * (0.035 + 0.05 * pose.excite) : 0.025 * Math.sin(ph * 1.7);
+    set(16, pet, hop, ph, pet === 1 ? 0.12 * button : 0);
+    const pc = hexToLinear(c.petColor);
+    set(17, pc[0], pc[1], pc[2], 0);
+    set(18, idx(STICKERS, c.sticker), 0, 0, 0);
+    set(19, pose.poke[0], pose.poke[1], pose.poke[2], pose.pokeAmp);
+    set(20, pose.wobble * 1.4, pose.wobblePhase, 0, 0);
   },
 };
 
-export type GrokAvatar = Avatar<CrewConfig>;
+export type CrewAvatar = Avatar<CrewConfig>;

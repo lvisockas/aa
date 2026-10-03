@@ -44,7 +44,7 @@ const DEMO: Record<FamilyId, Array<[string, number]>> = {
   arcade: [['thinking', 2.2], ['working', 3.0], ['orbit', 3.2], ['waiting', 2.2], ['done', 2.6], ['idle', 0]],
   clay: [['thinking', 2.2], ['working', 3.0], ['orbit', 3.2], ['waiting', 2.2], ['done', 2.6], ['idle', 0]],
   bomber: [['thinking', 2.2], ['working', 3.0], ['orbit', 3.2], ['waiting', 2.2], ['done', 2.6], ['idle', 0]],
-  crew: [['thinking', 2.2], ['working', 3.0], ['orbit', 3.2], ['waiting', 2.2], ['done', 2.6], ['idle', 0]],
+  crew: [['listening', 1.8], ['thinking', 2.4], ['working', 3.2], ['suspicious', 2.6], ['emergency', 2.6], ['done', 2.6], ['idle', 0]],
   muse: [['listening', 1.8], ['thinking', 2.4], ['working', 3.4], ['speaking', 2.8], ['celebrating', 2.6], ['idle', 0]],
   // RebelMouse's agentic CMS pitch: it plans, creates, optimizes and grows
   rebel: [['planning', 2.4], ['creating', 3.2], ['optimizing', 2.8], ['publishing', 2.8], ['growing', 2.6], ['idle', 0]],
