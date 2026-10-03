@@ -141,7 +141,7 @@ if (family === 'dots') {
     return { hair: c.hair, glasses: c.glasses, ink };
   });
   check('part chips redraw the portrait in ink', d.hair === 7 && d.glasses === 3 && d.ink > 100, JSON.stringify(d));
-} else if (['bomber', 'crew'].includes(family)) {
+} else if (['bomber', 'crew', 'arcade', 'clay'].includes(family)) {
   // the first visible part control: pick its last option through the inspector
   const pick = await page.evaluate(() => {
     const ctl = [...document.querySelectorAll('.ctl[data-key]')].find((el) => el.dataset.key !== 'state' && el.offsetParent && el.querySelector('button[data-v]'));
@@ -153,7 +153,7 @@ if (family === 'dots') {
   await settle(2);
   const v = await page.evaluate((k) => { const s = window.__app.liveStages[0]; return k ? String(s.avatars[s.selected].config[k]) : null; }, pick && pick.key);
   check('part chips update the 3D character', !!pick && v === pick.v, JSON.stringify({ ...pick, v }));
-} else if (['ghost', 'blob', 'cards', 'moods', 'bugs'].includes(family)) {
+} else if (['ghost', 'blob', 'cards', 'moods', 'bugs', 'pet'].includes(family)) {
   // the first visible part control: pick its last option through the inspector
   const pick = await page.evaluate(() => {
     const ctl = [...document.querySelectorAll('.ctl[data-key]')].find((el) => el.dataset.key !== 'state' && el.offsetParent && el.querySelector('button[data-v]'));

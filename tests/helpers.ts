@@ -13,6 +13,9 @@ import { moods } from '../src/families/moods';
 import { bugs } from '../src/families/bugs';
 import { bomber } from '../src/families/bomber';
 import { crew } from '../src/families/crew';
+import { arcade } from '../src/families/arcade';
+import { clay } from '../src/families/clay';
+import { pet } from '../src/families/pet';
 import type { FamilyDef } from '../src/families/types';
 
-export const FAMILY_LIST: FamilyDef<any>[] = [dots, grok, muse, rebel, poly, doodle, clawd, faces, ghost, blob, cards, moods, bugs, bomber, crew];
+export const FAMILY_LIST: FamilyDef<any>[] = [dots, grok, muse, rebel, poly, doodle, clawd, faces, ghost, blob, cards, moods, bugs, bomber, crew, arcade, clay, pet];

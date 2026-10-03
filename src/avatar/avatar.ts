@@ -325,6 +325,8 @@ export class Avatar<C extends BaseConfig = BaseConfig> {
   private familyExpr(kind: 'squeeze' | 'dizzy' | 'pet' | 'excited'): string {
     const map: Record<string, Record<string, string>> = {
       grok: { squeeze: 'laugh', dizzy: 'dizzy', pet: 'happy', excited: 'starstruck' },
+      arcade: { squeeze: 'laugh', dizzy: 'dizzy', pet: 'happy', excited: 'starstruck' },
+      clay: { squeeze: 'laugh', dizzy: 'dizzy', pet: 'happy', excited: 'starstruck' },
       bomber: { squeeze: 'laugh', dizzy: 'dizzy', pet: 'happy', excited: 'starstruck' },
       crew: { squeeze: 'laugh', dizzy: 'dizzy', pet: 'happy', excited: 'starstruck' },
       dots: { squeeze: 'squeeze', dizzy: 'dizzy', pet: 'happy', excited: 'excited' },
@@ -339,6 +341,7 @@ export class Avatar<C extends BaseConfig = BaseConfig> {
       cards: { squeeze: 'squeeze', dizzy: 'dizzy', pet: 'happy', excited: 'excited' },
       moods: { squeeze: 'squeeze', dizzy: 'dizzy', pet: 'happy', excited: 'excited' },
       bugs: { squeeze: 'squeeze', dizzy: 'dizzy', pet: 'happy', excited: 'excited' },
+      pet: { squeeze: 'squeeze', dizzy: 'dizzy', pet: 'happy', excited: 'excited' },
     };
     return map[this.family.id]?.[kind] ?? 'happy';
   }

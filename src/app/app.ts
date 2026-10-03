@@ -15,6 +15,9 @@ import { moods } from '../families/moods';
 import { bugs } from '../families/bugs';
 import { bomber } from '../families/bomber';
 import { crew } from '../families/crew';
+import { arcade } from '../families/arcade';
+import { clay } from '../families/clay';
+import { pet } from '../families/pet';
 import type { BaseConfig, FamilyDef } from '../families/types';
 import { icons } from '../ui/icons';
 import { Inspector } from '../ui/inspector';
@@ -29,15 +32,17 @@ type Route = 'home' | FamilyId;
 declare const __SANDBOXED__: boolean;
 type AnyFamily = FamilyDef<any>;
 
-export const FAMILIES: Record<FamilyId, AnyFamily> = { dots, grok, muse, rebel, poly, doodle, clawd, faces, ghost, blob, cards, moods, bugs, bomber, crew };
-const ORDER: FamilyId[] = ['dots', 'grok', 'muse', 'rebel', 'poly', 'bomber', 'crew', 'doodle', 'clawd', 'faces', 'ghost', 'blob', 'cards', 'moods', 'bugs'];
+export const FAMILIES: Record<FamilyId, AnyFamily> = { dots, grok, muse, rebel, poly, doodle, clawd, faces, ghost, blob, cards, moods, bugs, bomber, crew, arcade, clay, pet };
+const ORDER: FamilyId[] = ['dots', 'grok', 'muse', 'rebel', 'poly', 'bomber', 'crew', 'arcade', 'clay', 'doodle', 'clawd', 'faces', 'ghost', 'blob', 'cards', 'moods', 'bugs', 'pet'];
 /** each view shows one character: the family's lead on the overview, and the studio opens on it too */
-const LEAD: Record<FamilyId, number> = { dots: 4, grok: 0, muse: 6, rebel: 0, poly: 0, doodle: 0, clawd: 0, faces: 0, ghost: 0, blob: 0, cards: 0, moods: 0, bugs: 0, bomber: 0, crew: 0 };
+const LEAD: Record<FamilyId, number> = { dots: 4, grok: 0, muse: 6, rebel: 0, poly: 0, doodle: 0, clawd: 0, faces: 0, ghost: 0, blob: 0, cards: 0, moods: 0, bugs: 0, bomber: 0, crew: 0, arcade: 0, clay: 0, pet: 0 };
 
 /** Scripted task runs that showcase each family's motion-based state language. */
 const DEMO: Record<FamilyId, Array<[string, number]>> = {
   dots: [['listening', 1.8], ['thinking', 2.4], ['working', 3.2], ['awaiting', 2.6], ['complete', 2.6], ['idle', 0]],
   grok: [['thinking', 2.2], ['working', 3.0], ['orbit', 3.2], ['waiting', 2.2], ['done', 2.6], ['idle', 0]],
+  arcade: [['thinking', 2.2], ['working', 3.0], ['orbit', 3.2], ['waiting', 2.2], ['done', 2.6], ['idle', 0]],
+  clay: [['thinking', 2.2], ['working', 3.0], ['orbit', 3.2], ['waiting', 2.2], ['done', 2.6], ['idle', 0]],
   bomber: [['thinking', 2.2], ['working', 3.0], ['orbit', 3.2], ['waiting', 2.2], ['done', 2.6], ['idle', 0]],
   crew: [['thinking', 2.2], ['working', 3.0], ['orbit', 3.2], ['waiting', 2.2], ['done', 2.6], ['idle', 0]],
   muse: [['listening', 1.8], ['thinking', 2.4], ['working', 3.4], ['speaking', 2.8], ['celebrating', 2.6], ['idle', 0]],
@@ -47,6 +52,7 @@ const DEMO: Record<FamilyId, Array<[string, number]>> = {
   doodle: [['listening', 1.8], ['thinking', 2.4], ['working', 3.0], ['speaking', 2.4], ['happy', 2.6], ['idle', 0]],
   clawd: [['listening', 2.2], ['thinking', 2.6], ['working', 4.0], ['awaiting', 2.6], ['done', 2.6], ['idle', 0]],
   faces: [['listening', 2.0], ['thinking', 2.6], ['writing', 3.4], ['speaking', 2.6], ['done', 2.6], ['idle', 0]],
+  pet: [['listening', 2.0], ['thinking', 2.6], ['working', 3.2], ['speaking', 2.6], ['done', 2.6], ['idle', 0]],
   ghost: [['listening', 2.0], ['thinking', 2.6], ['working', 3.2], ['speaking', 2.6], ['done', 2.6], ['idle', 0]],
   blob: [['listening', 2.0], ['thinking', 2.6], ['working', 3.2], ['speaking', 2.6], ['done', 2.6], ['idle', 0]],
   cards: [['listening', 2.0], ['thinking', 2.6], ['working', 3.2], ['speaking', 2.6], ['done', 2.6], ['idle', 0]],
@@ -165,6 +171,8 @@ export class App {
           <button class="tab" role="tab" data-route="poly" title="Polydots · mash-up"><span class="long">Polydots</span><span class="short">Poly</span><small>mash-up</small></button>
           <button class="tab" role="tab" data-route="bomber" title="Bombers · Arcade blasters">Bombers<small>Arcade blasters</small></button>
           <button class="tab" role="tab" data-route="crew" title="Crew · Space impostors">Crew<small>Space impostors</small></button>
+          <button class="tab" role="tab" data-route="arcade" title="Chompers · Maze arcade">Chompers<small>Maze arcade</small></button>
+          <button class="tab" role="tab" data-route="clay" title="Clay · Stop-motion">Clay<small>Stop-motion</small></button>
           <button class="tab" role="tab" data-route="doodle" title="Doodles · 2D"><span class="long">Doodles</span><span class="short">Doodles</span><small>2D</small></button>
           <button class="tab" role="tab" data-route="clawd" title="Clawd · Claude Code">Clawd<small>Claude Code</small></button>
           <button class="tab" role="tab" data-route="faces" title="Faces · Notion-style">Faces<small>Notion-style</small></button>
@@ -173,6 +181,7 @@ export class App {
           <button class="tab" role="tab" data-route="cards" title="Cards · Archetypes">Cards<small>Archetypes</small></button>
           <button class="tab" role="tab" data-route="moods" title="Moods · Crayon">Moods<small>Crayon</small></button>
           <button class="tab" role="tab" data-route="bugs" title="Bugs · Marker">Bugs<small>Marker</small></button>
+          <button class="tab" role="tab" data-route="pet" title="Pocket pets · Virtual pet">Pets<small>Virtual pet</small></button>
         </nav>
         <div class="top-actions">
           <div class="menu" id="settings">
