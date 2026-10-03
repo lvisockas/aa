@@ -42,7 +42,7 @@ const DEMO: Record<FamilyId, Array<[string, number]>> = {
   dots: [['listening', 1.8], ['thinking', 2.4], ['working', 3.2], ['awaiting', 2.6], ['complete', 2.6], ['idle', 0]],
   grok: [['thinking', 2.2], ['working', 3.0], ['orbit', 3.2], ['waiting', 2.2], ['done', 2.6], ['idle', 0]],
   arcade: [['listening', 1.8], ['thinking', 2.4], ['working', 3.2], ['powerup', 2.4], ['frightened', 2.4], ['done', 2.6], ['idle', 0]],
-  clay: [['thinking', 2.2], ['working', 3.0], ['orbit', 3.2], ['waiting', 2.2], ['done', 2.6], ['idle', 0]],
+  clay: [['waving', 2.0], ['thinking', 2.6], ['working', 3.2], ['speaking', 2.6], ['squish', 2.2], ['done', 2.6], ['idle', 0]],
   bomber: [['listening', 1.8], ['thinking', 2.4], ['working', 3.0], ['planting', 2.6], ['dancing', 2.6], ['done', 2.6], ['idle', 0]],
   crew: [['listening', 1.8], ['thinking', 2.4], ['working', 3.2], ['suspicious', 2.6], ['emergency', 2.6], ['done', 2.6], ['idle', 0]],
   muse: [['listening', 1.8], ['thinking', 2.4], ['working', 3.4], ['speaking', 2.8], ['celebrating', 2.6], ['idle', 0]],
