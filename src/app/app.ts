@@ -43,7 +43,7 @@ const DEMO: Record<FamilyId, Array<[string, number]>> = {
   grok: [['thinking', 2.2], ['working', 3.0], ['orbit', 3.2], ['waiting', 2.2], ['done', 2.6], ['idle', 0]],
   arcade: [['thinking', 2.2], ['working', 3.0], ['orbit', 3.2], ['waiting', 2.2], ['done', 2.6], ['idle', 0]],
   clay: [['thinking', 2.2], ['working', 3.0], ['orbit', 3.2], ['waiting', 2.2], ['done', 2.6], ['idle', 0]],
-  bomber: [['thinking', 2.2], ['working', 3.0], ['orbit', 3.2], ['waiting', 2.2], ['done', 2.6], ['idle', 0]],
+  bomber: [['listening', 1.8], ['thinking', 2.4], ['working', 3.0], ['planting', 2.6], ['dancing', 2.6], ['done', 2.6], ['idle', 0]],
   crew: [['listening', 1.8], ['thinking', 2.4], ['working', 3.2], ['suspicious', 2.6], ['emergency', 2.6], ['done', 2.6], ['idle', 0]],
   muse: [['listening', 1.8], ['thinking', 2.4], ['working', 3.4], ['speaking', 2.8], ['celebrating', 2.6], ['idle', 0]],
   // RebelMouse's agentic CMS pitch: it plans, creates, optimizes and grows

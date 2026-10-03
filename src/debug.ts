@@ -14,7 +14,9 @@ document.body.style.cssText = `margin:0;background:${fam.background}`;
 document.body.appendChild(canvas);
 const r = new Renderer(canvas);
 if (params.get('q')) r.quality = QUALITY[params.get('q') as QualityName];
-const T = params.has('t') ? parseFloat(params.get('t')!) : -1;
+const warm = +(params.get('warm') || 0);
+// a frozen time earlier than the warm-up would run the warm-up at negative times (blinks never start), so push it past
+const T = params.has('t') ? Math.max(parseFloat(params.get('t')!), warm / 60) : -1;
 let roster = fam.roster();
 if (params.get('only')) roster = params.get('only')!.split(',').map((i) => roster[+i]);
 if (params.get('cfg')) roster = roster.map((c) => ({ ...c, ...JSON.parse(params.get('cfg')!) }));
@@ -23,7 +25,6 @@ const comp = fam.compose(avatars.length, innerWidth / innerHeight, false);
 avatars.forEach((a, i) => (a.home = comp.placements[i]));
 const w = window as unknown as { __frames: number; __err: string };
 // warm=N: advance N simulation steps before the first frame (settles state blends cheaply)
-const warm = +(params.get('warm') || 0);
 for (let i = 0; i < warm; i++) {
   const t = (T >= 0 ? T : 0) - (warm - i) / 60;
   for (const a of avatars) a.update(1 / 60, { t, pointer: null, pointerIdle: 99, camera: comp.camera.pos, neighbors: avatars, reducedMotion: false });
