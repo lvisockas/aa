@@ -96,6 +96,35 @@ headband placement interpret the text description rather than copy the artwork. 
 palette is in the spirit of the RebelMouse site; exact brand colour values were not verified. The mark on
 the brand flag is an original tapered-snout mouse head, not a copy of any existing logo.
 
+### 1.11 Toy box · Bombers, Crew, Chompers, Clay (3D) and Pocket pets (2D) (original)
+
+Five families in the spirit of game and toy icons the user named, as original characters. The four 3D ones
+reuse the Grok recipe (glossy shapes, no fur, faces as decals evaluated at shading time) and were built to a
+budget: each must render no slower than Grok, the cheapest ray-marched family. All four came in at 2-4x faster,
+because only the parts near a sample point are evaluated (limbs, props and accessories sit behind bounding
+tests) and every face, visor, stripe and buckle is colour rather than geometry.
+
+* **Bombers** (arcade bomb heroes, in the manner of Bomberman). A round helmet as big as the body with a real
+  recessed face window, tall eyes painted on the peach face, a coil antenna whose ball rides a damped spring,
+  a belted suit, mitts and boots. Props are the round bomb (cap, curly fuse, flickering spark) and orbiting
+  power-up tiles; extra states plant a bomb and dance.
+* **Crew** (space crewmates, in the manner of Among Us). A bean with stubby legs and a backpack; the face is a
+  visor with no features, so emotion lives in the visor's shape (squint, tilt, tall, lids) and its highlight,
+  which slides with the gaze; hearts, stars and spirals replace it for big feelings. Hats, a jetpack whose
+  flame fires on hops, stickers and a mini pet; "suspicious" and "emergency meeting" states, kept non-violent.
+* **Chompers** (maze arcade, in the manner of Pac-Man). A sphere minus a wedge whose angle animates the chomp,
+  and ghosts with a rippling scalloped skirt whose pupils roam inside the whites. Working chomps along a
+  scrolling row of dots that vanish as the mouth shuts; "frightened" turns ghosts deep blue with a zigzag mouth
+  and a flashing end, and "power-up" makes chompers grow and glow.
+* **Clay** (stop-motion claymation). Matte, waxy plasticine with procedural thumbprints, fingerprint whorls,
+  lumps, tool marks and darkened seams, all as bump in the shading. The pose is held on twos at 12 (or 8) fps
+  and the thumbprints re-seed every held frame, so the surface boils like hand-animated clay; speaking swaps
+  replacement mouths. A toggle restores smooth motion.
+* **Pocket pets** (90s virtual pets, in the manner of Tamagotchi), 2D. The whole keychain is the character: an
+  egg shell (solid, translucent with the circuit board showing, glitter, pearl), a ball chain that swings, three
+  buttons that press where you click, and a 32x16 dot-matrix LCD with unlit cells, an afterimage and care icons.
+  Five pixel species at four life stages hatch, wander, eat, get sick and sleep with the lights off.
+
 ### 1.10 A 2D sketchbook · Ghosts, Blobs, Cards, Moods, Bugs (original)
 
 Five more 2D families, each built from a reference sheet the user shared. The characters are original; what
@@ -261,12 +290,12 @@ So the renderer is now a hybrid, and each family uses the technique that fits it
 
 | Family | Technique | Why |
 |---|---|---|
-| Dots, Grok Bot, Muse, Rebels | SDF ray marching | soft blends, live morphs, dents where you click, volumetric fur |
+| Dots, Grok Bot, Muse, Rebels, Bombers, Crew, Chompers, Clay | SDF ray marching | soft blends, live morphs, dents where you click, volumetric fur, clay thumbprints |
 | Polydots | triangle rasterisation, 4x MSAA | it is polygons; the mesh is rebuilt on the CPU each frame from the same parameters |
 | Doodles | Canvas2D | flat 2D art styles need paths, strokes, patterns and blend modes, not 3D |
 | Clawd | Canvas2D, nearest-neighbour pixel sprite | the original is terminal block art; motion snaps to its pixel grid |
 | Faces | Canvas2D, monoline paths | a line-drawn portrait is strokes and flat fills; parts swap as paths |
-| Ghosts, Blobs, Cards, Moods, Bugs | Canvas2D, procedural paths plus cached texture tiles | flat fills, crayon and paint textures, text on cards: illustration, not geometry |
+| Ghosts, Blobs, Cards, Moods, Bugs, Pocket pets | Canvas2D, procedural paths plus cached texture tiles | flat fills, crayon and paint textures, text on cards: illustration, not geometry |
 
 All three share one canvas compositor, the same camera, lights and tone mapping (the lighting code
 lives in one `lighting.glsl` used by both GPU paths), the same picking API (exact SDF picking, a CPU
@@ -366,14 +395,15 @@ Overlay (2D canvas): emotes and name tags, projected from 3D
   packs finite parameters and survives boop, hold, pet and trick without NaNs.
 * `npm run interact` drives headless Chromium: gaze follows the pointer left and right, a click GPU-picks
   and selects the right avatar and dents it, the inspector follows, and the state bar works. This is run
-  for all thirteen families, plus family-specific checks (shape morphs, accessories, species presets, the
+  for all eighteen families, plus family-specific checks (shape morphs, accessories, species presets, the
   aimed megaphone, faceted-body morphs, 2D style switching, the terminal crab's states, Notion-style part swaps, a part chip on each sketchbook family). Every 2D family also draws every
   option of every control in every state in a unit test, and `scripts/sheet.mjs` renders a family's roster x
   states (or expressions, or one control's options) as a contact sheet in about two seconds, no WebGL needed). A unit test
   guards against the click-then-squash bug (a quick click used to leave the hold timer running).
 * `npm run shots` takes screenshots of any route and size in software GL, with a GPU sync before capture.
 * `npm run bench` reports steady-state frame cost per family in software GL (480×300, low quality):
-  Grok ~200 ms, Dots and Muse ~340 ms, Rebels ~440 ms per frame for the ray-marched families, against
+  Grok ~200 ms, Dots and Muse ~340 ms, Rebels ~440 ms per frame for the ray-marched families (and the toy-box
+  families built to a Grok budget: Chompers ~52 ms, Bombers ~86 ms, Clay ~87 ms, Crew ~85-103 ms), against
   ~19 ms for the rasterised Polydots (down from ~85 ms when they were ray-marched; most of what is left is
   fixed per-frame overhead). On a GPU the same work is two to three orders of magnitude faster, which is
   what the adaptive resolution and quality tiers manage.

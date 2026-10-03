@@ -79,6 +79,13 @@ export const researchHTML = `
   freckles, accessories) and sits on an optional pastel disc. The features slide slightly towards your cursor, and
   states bring props drawn in the same line: thinking dots, a pencil and page, a check.</p>
 
+  <h3>Toy box · Bombers, Crew, Chompers, Clay, Pocket pets</h3>
+  <p>Original characters in the spirit of game and toy icons. <b>Bombers</b>: glossy helmet heroes with a
+  springy antenna and a lit bomb. <b>Crew</b>: bean astronauts whose visor watches you and does all the acting.
+  <b>Chompers</b>: a wedge mouth that eats a row of dots, and ghosts that turn blue when frightened. <b>Clay</b>:
+  plasticine with thumbprints, animated on twos like stop-motion. <b>Pocket pets</b>: a pixel pet on a keychain
+  LCD that hatches, eats and sleeps. The 3D four were built to a budget and render 2-4x faster than Grok.</p>
+
   <h3>A 2D sketchbook · Ghosts, Blobs, Cards, Moods, Bugs</h3>
   <p>Five more illustration styles, each rebuilt from a reference sheet with original characters.
   <b>Ghosts</b>: rubbery cartoon ghosts with rimmed eyes, shouting mouths and noodle arms that sprout on demand.

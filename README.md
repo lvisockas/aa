@@ -2,9 +2,10 @@
 
 Interactive, cursor-reactive avatars: 3D characters inspired by the three agent mascots of autumn 2026,
 **OpenAI Dots**, **xAI Grok Bot** and **Meta Muse ("Jolly")**, a family built around the **RebelMouse**
-mascot and a low-poly **Dots × RebelMouse** mash-up, plus a 2D sketchbook: five **doodles**, **Clawd**,
+mascot, a low-poly **Dots × RebelMouse** mash-up, arcade-toy **Bombers**, **Crew** and **Chompers**, and
+stop-motion **Clay**, plus a 2D sketchbook: five **doodles**, **Clawd**,
 Claude Code's terminal crab, Notion-style **Faces**, and **Ghosts**, **Blobs**, **Cards**, **Moods** and
-**Bugs**, each in its own illustration style. Every character is rendered live, with no three.js and no
+**Bugs**, each in its own illustration style, and **Pocket pets** living on a keychain LCD. Every character is rendered live, with no three.js and no
 downloaded assets, and every character is fully customisable. The renderer is a hybrid: a WebGL2
 signed-distance-field ray marcher for the soft characters, a mesh rasteriser in the same renderer for the
 low-poly ones, and Canvas2D for the 2D styles.
@@ -16,6 +17,10 @@ low-poly ones, and Canvas2D for the 2D styles.
 | Muse | Meta | Articulated plush "Jolly" cast with longer fur, outfits, hats and held items |
 | Rebels | RebelMouse | The bandana-wearing mouse plus a panda, raccoon and fox: swishing tails, flags and megaphones, in vinyl, plush or flat-logo finishes |
 | Polydots | mash-up | Dots silhouettes cut into true low-poly facets, with mouse ears, bead-gem eyes, a bandana and a bead tail |
+| Bombers | arcade bomb heroes (Bomberman-style) | Glossy helmet heroes with a face window, springy antenna, mitts, boots and a lit bomb; planting and dancing states |
+| Crew | space impostors (Among Us-style) | Bean astronauts with backpacks and a glossy visor that watches you; hats, pets, suspicious and emergency-meeting states |
+| Chompers | maze arcade (Pac-Man-style) | Wedge-mouthed chompers that eat a row of dots, and scallop-skirted ghosts with roaming pupils and a frightened blue mode |
+| Clay | stop-motion claymation | Plasticine pals with thumbprints, clay eyeballs and toothy grins, animated on twos at 12 fps with a boiling surface |
 | Doodles | 2D art styles | Five characters in five simple styles: flat vector, ink doodle, pixel art, paper cut-out, risograph |
 | Clawd | Claude Code | The terminal crab at its true block-art resolution, animated in whole pixels, with a working status line |
 | Faces | Notion-style | Black monoline portraits built from parts: face shapes, hair, eyes, brows, noses, mouths, glasses, beards, accessories |
@@ -24,6 +29,7 @@ low-poly ones, and Canvas2D for the 2D styles.
 | Cards | character-card sets | The whole card is the character: title, colour panel and a line-drawn person whose hands act out each state |
 | Moods | crayon emotion posters | Flat colour dots with faces in grainy wax crayon, loopy hair escaping the dot, lines that boil |
 | Bugs | marker-and-gouache picture books | Streaky painted critters on stick legs, with feelers, googly eyes, patterned wings and many body types |
+| Pocket pets | 90s virtual pets (Tamagotchi-style) | An egg-shaped keychain with a dot-matrix LCD: a pixel pet hatches, wanders, eats, gets sick and sleeps with the lights off |
 
 **Open `dist/index.html` in any modern browser.** It's a single self-contained file.
 
@@ -43,7 +49,7 @@ Short version: these characters *are* soft primitives blended together, which is
 Ray marching that field directly gives continuous shape morphing, poke dents, squash and stretch, soft
 shadows, ambient occlusion and volumetric fur almost for free, in one ~240 KB file. A mesh engine would
 need remeshing or morph targets, shadow maps, SSAO and shell geometry to get the same look.
-**See [docs/RESEARCH.md](docs/RESEARCH.md)** for the product research (all thirteen families), the hybrid-rendering decision and the full
+**See [docs/RESEARCH.md](docs/RESEARCH.md)** for the product research (all eighteen families), the hybrid-rendering decision and the full
 comparison: three.js, Babylon, PlayCanvas, Rive, pre-rendered and neural video, Gaussian splats, WebGPU.
 
 ## Development
@@ -63,7 +69,7 @@ npm run debug      # dist/debug.html: one family, no UI (debug.html?family=dots&
 npm run build:artifact  # dist/artifact.html for sandboxed hosts (no document skeleton, no downloads)
 ```
 
-Routes: `#dots`, `#grok`, `#muse`, `#rebel`, `#poly`, `#doodle`, `#clawd`, `#faces`, `#ghost`, `#blob`, `#cards`, `#moods`, `#bugs` (overview otherwise). URL parameters: `?q=low|medium|high|ultra`
+Routes: `#dots`, `#grok`, `#muse`, `#rebel`, `#poly`, `#bomber`, `#crew`, `#arcade`, `#clay`, `#doodle`, `#clawd`, `#faces`, `#ghost`, `#blob`, `#cards`, `#moods`, `#bugs`, `#pet` (overview otherwise). URL parameters: `?q=low|medium|high|ultra`
 (quality), `?res=0.4` (pin the render scale), `?t=1.5` (freeze time, deterministic renders), `?stop=N` (stop after N frames).
 
 Headless tests run on SwiftShader (a CPU emulation of the GPU), which is 100× or more slower than real hardware for
@@ -99,5 +105,8 @@ RebelMouse mascot and Clawd belong to their respective owners; the Faces follow 
 (Notion Faces, by Buck) but every part is drawn from scratch; the Polydots and Doodles are original. The
 Ghosts, Blobs, Cards, Moods and Bugs are original characters drawn in styles the user shared as references: a
 cartoon ghost expression sheet in the manner of *Foster's Home for Imaginary Friends*, a flat jelly-blob set, a
-character-card set, Yuko Yamariko's *Emotions* poster and Elise Gravel's painted bugs. No artwork is copied. Rendering techniques draw on work by Inigo Quilez, Khronos (PBR Neutral),
+character-card set, Yuko Yamariko's *Emotions* poster and Elise Gravel's painted bugs. The Bombers, Crew,
+Chompers, Pocket pets and Clay are original characters in the spirit of Bomberman, Among Us, Pac-Man,
+Tamagotchi and British claymation; those names and characters belong to their owners and none are used. No
+artwork is copied. Rendering techniques draw on work by Inigo Quilez, Khronos (PBR Neutral),
 Estevez & Kulla (sheen) and t3ssel8r (procedural motion).

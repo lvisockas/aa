@@ -42,7 +42,7 @@ const DEMO: Record<FamilyId, Array<[string, number]>> = {
   dots: [['listening', 1.8], ['thinking', 2.4], ['working', 3.2], ['awaiting', 2.6], ['complete', 2.6], ['idle', 0]],
   grok: [['thinking', 2.2], ['working', 3.0], ['orbit', 3.2], ['waiting', 2.2], ['done', 2.6], ['idle', 0]],
   arcade: [['listening', 1.8], ['thinking', 2.4], ['working', 3.2], ['powerup', 2.4], ['frightened', 2.4], ['done', 2.6], ['idle', 0]],
-  clay: [['waving', 2.0], ['thinking', 2.6], ['working', 3.2], ['speaking', 2.6], ['squish', 2.2], ['done', 2.6], ['idle', 0]],
+  clay: [['waving', 2.0], ['thinking', 2.6], ['working', 3.2], ['speaking', 2.6], ['morphing', 2.2], ['done', 2.6], ['idle', 0]],
   bomber: [['listening', 1.8], ['thinking', 2.4], ['working', 3.0], ['planting', 2.6], ['dancing', 2.6], ['done', 2.6], ['idle', 0]],
   crew: [['listening', 1.8], ['thinking', 2.4], ['working', 3.2], ['suspicious', 2.6], ['emergency', 2.6], ['done', 2.6], ['idle', 0]],
   muse: [['listening', 1.8], ['thinking', 2.4], ['working', 3.4], ['speaking', 2.8], ['celebrating', 2.6], ['idle', 0]],
@@ -327,7 +327,7 @@ export class App {
       <section class="overview">
         <div class="hero">
           <h1>Why AI agents are getting cute</h1>
-          <p>OpenAI Dots, Grok Bot, Meta Muse and the RebelMouse crew, rebuilt as live 3D characters, plus a low-poly Dots × RebelMouse mash-up, five 2D doodles, Claude Code’s terminal crab, Notion-style faces and a 2D sketchbook of ghost friends, jelly blobs, character cards, crayon moods and marker bugs. Move your cursor and they'll watch you. Click to boop, hold to squish, drag to pet.</p>
+          <p>OpenAI Dots, Grok Bot, Meta Muse and the RebelMouse crew, rebuilt as live 3D characters, plus a low-poly Dots × RebelMouse mash-up, arcade-toy bombers, crewmates and chompers, stop-motion clay pals, five 2D doodles, Claude Code’s terminal crab, Notion-style faces and a 2D sketchbook of ghost friends, jelly blobs, character cards, crayon moods, marker bugs and pocket pets. Move your cursor and they'll watch you. Click to boop, hold to squish, drag to pet.</p>
         </div>
         <div class="cards">
           ${ORDER.map((id) => {
