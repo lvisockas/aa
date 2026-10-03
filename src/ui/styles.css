@@ -125,6 +125,7 @@ button { font: inherit; color: inherit; }
 /* sixteen tabs: below ~1640px use the short names (All, Grok, Poly) and drop the brand text */
 @media (max-width: 1640px) {
   .brand span { display: none; }
+  .tab { padding: 7px 8px; font-size: 13.5px; }
   .tab .long { display: none; }
   .tab .short { display: inline; }
 }
