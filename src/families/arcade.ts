@@ -1,206 +1,215 @@
-// STUB copied from grok.ts: to be replaced by the full family.
+// ---------------------------------------------------------------------------
+// Chompers: maze-arcade characters as glossy 3D toys. Two kinds share one
+// family: round chompers (a sphere with a wedge mouth that chomps) and maze
+// ghosts (a dome with a rippling scalloped hem and big look-around eyes).
+// Eyes, blush, sunglasses and the ghost mouth are decals evaluated at shading
+// time; the geometry is a sphere / dome plus small gated extras.
+// ---------------------------------------------------------------------------
 import shader from '../shaders/arcade.glsl';
-import { deg, hexToLinear, normalize, relLuminance, type Vec3 } from '../engine/math';
+import { clamp, deg, hexToLinear, normalize, quatRotate, type Quat, type Vec3 } from '../engine/math';
 import type { Avatar, Pose } from '../avatar/avatar';
 import type { CharFrame } from '../engine/renderer';
-import type { BaseConfig, EyeSpec, FaceTarget, FamilyDef, Option, Placement } from './types';
+import type { BaseConfig, EyeSpec, FaceTarget, FamilyDef, Option } from './types';
 import { groupPhoto, soloCamera } from './compose';
 
 export interface ArcadeConfig extends BaseConfig {
-  shape: number;
-  sides: number;
-  roundness: number;
-  aspect: number;
-  bulge: number;
-  waves: number;
-  waveCount: number;
-  tilt: number;
-  thickness: number;
-  inflate: number;
+  /** 0 chomper, 1 maze ghost */
+  kind: number;
   color: string;
-  material: string;
-  eyeSize: number;
-  eyeSpacing: number;
-  eyeHeight: number;
-  eyeTilt: number;
-  eyeColor: string;
-  /** previous silhouette while a shape morph is running */
-  _from?: { shape: number; sides: number; roundness: number; aspect: number };
+  /** 0 big, 1 none (chompers only), 2 sleepy, 3 angry */
+  eyeStyle: number;
+  /** chomper: how wide the mouth opens */
+  mouthSize: number;
+  /** chomper: 0 none, 1 boots, 2 boots + gloves */
+  gear: number;
+  gearColor: string;
+  /** ghost: scallops across the front of the hem */
+  scallops: number;
+  /** 0 none, 1 bow, 2 cap, 3 sunglasses, 4 crown */
+  accessory: number;
+  accColor: string;
+  /** neon rim glow */
+  glow: number;
+  /** resting turn, degrees (negative faces left) */
+  facing: number;
 }
 
-export const GROK_SHAPES: Option[] = [
-  { value: 0, label: 'Circle', icon: 'M12 3a9 9 0 1 1 0 18a9 9 0 1 1 0-18z' },
-  { value: 1, label: 'Oval', icon: 'M12 6c6 0 10 2.7 10 6s-4 6-10 6S2 15.3 2 12s4-6 10-6z' },
-  { value: 2, label: 'Rounded square', icon: 'M8 3h8a5 5 0 0 1 5 5v8a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5V8a5 5 0 0 1 5-5z' },
-  { value: 3, label: 'Pill', icon: 'M8 6h8a6 6 0 0 1 0 12H8A6 6 0 0 1 8 6z' },
-  { value: 4, label: 'Triangle', icon: 'M10.3 4.2a2 2 0 0 1 3.4 0l7.6 13a2 2 0 0 1-1.7 3H4.4a2 2 0 0 1-1.7-3z' },
-  { value: 5, label: 'Hexagon', icon: 'M7.5 3.5h9L21 12l-4.5 8.5h-9L3 12z' },
-  { value: 6, label: 'Cloud', icon: 'M7 19a4.5 4.5 0 0 1-.6-9A5.5 5.5 0 0 1 17 8.5a4.5 4.5 0 0 1 .5 10.5z' },
-  { value: 7, label: 'Teardrop', icon: 'M12 2.5c3 4.5 7 8 7 12a7 7 0 0 1-14 0c0-4 4-7.5 7-12z' },
-  { value: 8, label: 'Polygon', icon: 'M12 2.5l9 6.5-3.4 10.5H6.4L3 9z' },
+const KINDS: Option[] = [
+  { value: 0, label: 'Chomper', icon: 'M12 3a9 9 0 1 0 7.8 13.5L12 12l7.8-4.5A9 9 0 0 0 12 3z' },
+  { value: 1, label: 'Ghost', icon: 'M4 21V11a8 8 0 0 1 16 0v10l-2.7-2-2.6 2-2.7-2-2.6 2-2.7-2z' },
 ];
 
-export const GROK_COLORS = [
-  '#EE7330', '#F2A03D', '#F5C518', '#3CBF6B', '#4DB8A4', '#3B82F6',
-  '#8B5CF6', '#EC4899', '#EF4444', '#8B6B4A', '#6B7280', '#141414',
+export const ARCADE_COLORS = [
+  '#FFD21F', '#FF7FC4', '#FF3B3B', '#FF9BDB', '#3FE0F0', '#FFA53D',
+  '#5BE36B', '#9B6BFF', '#3B6BFF', '#F4F2EC', '#FF5A1F', '#2B2B33',
 ];
+const GHOST_QUARTET = ['#FF3B3B', '#FF9BDB', '#3FE0F0', '#FFA53D'];
+const ACC_COLORS = ['#E8202E', '#2B59FF', '#FFD21F', '#1F1F24', '#F4F2EC', '#FF7FC4', '#34C759'];
+const GEAR_COLORS = ['#E8202E', '#2B59FF', '#1F1F24', '#F4F2EC', '#8A4B2A', '#34C759'];
 
 const EXPRESSIONS: Option[] = [
   { value: 'neutral', label: 'Neutral' },
   { value: 'happy', label: 'Happy' },
   { value: 'wink', label: 'Wink' },
-  { value: 'sleepy', label: 'Sleepy' },
   { value: 'surprised', label: 'Surprised' },
   { value: 'curious', label: 'Curious' },
   { value: 'focused', label: 'Focused' },
-  { value: 'determined', label: 'Determined' },
+  { value: 'mischief', label: 'Mischief' },
+  { value: 'shy', label: 'Shy' },
   { value: 'sad', label: 'Sad' },
   { value: 'angry', label: 'Grumpy' },
+  { value: 'sleepy', label: 'Sleepy' },
   { value: 'love', label: 'Love' },
   { value: 'starstruck', label: 'Starstruck' },
   { value: 'dizzy', label: 'Dizzy' },
   { value: 'laugh', label: 'Laugh' },
-  { value: 'skeptical', label: 'Skeptical' },
-  { value: 'error', label: 'Error' },
+  { value: 'frightened', label: 'Frightened' },
+  { value: 'content', label: 'Content' },
+  { value: 'gameover', label: 'Game over' },
 ];
 
 // eye kinds understood by the shader
-const PILL = 0, OVAL = 1, ARC = 2, LINE = 3, X = 4, CHEVRON = 5, HEART = 6, STAR = 7, SPIRAL = 8;
+const OPEN = 0, ARC = 1, LINE = 2, X = 3, SPIRAL = 4, STAR = 5, HEART = 6, SMALL = 7, CHEVRON = 8;
 
-const eye = (kind: number, w: number, h: number, o: Partial<EyeSpec> = {}): EyeSpec => ({
-  kind, w, h, rot: 0, lid: 0, lidAng: 0, dx: 0, dy: 0, ...o,
+// EyeSpec: w/h scale the eye, rot is the pupil scale offset (OPEN eyes), lid / lidAng the upper lid
+const eye = (kind: number, o: Partial<EyeSpec> = {}): EyeSpec => ({
+  kind, w: 1, h: 1, rot: 0, lid: 0, lidAng: 0, dx: 0, dy: 0, ...o,
 });
 
-const both = (l: EyeSpec, r: EyeSpec = { ...l }, lidB = 0): FaceTarget => ({
-  l, r, lidB, mouth: 0, mouthOpen: 0, cheeks: 0,
+const face2 = (l: EyeSpec, r: EyeSpec = { ...l }, mouth = 0, mouthOpen = 0, cheeks = 0): FaceTarget => ({
+  l, r, lidB: 0, mouth, mouthOpen, cheeks,
 });
 
 const arcadeFace = (c: ArcadeConfig, expr: string): FaceTarget => {
-  // positive slant leans the top of the slits to the right, as in the reference pile
-  const tilt = -deg(c.eyeTilt);
-  const pill = (o: Partial<EyeSpec> = {}) => eye(PILL, 0.085, 0.2, { rot: tilt, ...o });
+  const ghost = c.kind === 1;
+  // the eye style sets the resting lids
+  const lid = c.eyeStyle === 2 ? 0.42 : c.eyeStyle === 3 ? 0.3 : 0;
+  const ang = c.eyeStyle === 3 ? 0.55 : 0;
+  const open = (o: Partial<EyeSpec> = {}) => eye(OPEN, { lid, lidAng: ang, ...o });
   switch (expr) {
     case 'happy':
-      return both(eye(ARC, 0.05, 0.17, { dy: 0.01 }));
+      return face2(eye(ARC), eye(ARC), 0.7, 0, 0.45);
     case 'wink':
-      return both(pill(), eye(ARC, 0.05, 0.17, { dy: 0.01 }));
-    case 'sleepy':
-      return both(eye(LINE, 0.045, 0.15, { dy: -0.025, rot: 0.08 }), eye(LINE, 0.045, 0.15, { dy: -0.025, rot: -0.08 }));
+      return face2(open(), eye(ARC), 0.5, 0, 0.3);
     case 'surprised':
-      return both(eye(OVAL, 0.12, 0.23, { dy: 0.01 }));
+      return face2(eye(OPEN, { w: 1.08, h: 1.12, rot: -0.3 }), undefined, 0, 0.8);
+    case 'listening':
+      return face2(eye(OPEN, { w: 1.04, h: 1.07, lid: lid * 0.5 }), undefined, 0.2, 0.1);
     case 'curious':
-      return both(pill({ h: 0.22, rot: tilt + 0.1 }), pill({ h: 0.16, rot: tilt + 0.1, dy: 0.012 }));
+      return face2(open({ h: 1.08, dy: 0.06 }), open({ lid: Math.max(lid, 0.32), lidAng: -0.15 }), 0.1, 0.15);
     case 'focused':
-      return both(pill({ w: 0.09, h: 0.18, lid: 0.3 }));
-    case 'determined':
-      return both(pill({ w: 0.09, h: 0.19, lid: 0.32, lidAng: 0.42 }), pill({ w: 0.09, h: 0.19, lid: 0.32, lidAng: -0.42 }));
+      return face2(open({ lid: Math.max(lid, 0.36), lidAng: 0.22 }), undefined, 0, 0);
+    case 'mischief':
+      return face2(open({ lid: 0.42, lidAng: 0.5, rot: -0.1 }), open({ lid: 0.3, lidAng: 0.2, rot: -0.1 }), 0.55, 0, 0.1);
+    case 'shy':
+      return face2(open({ lid: Math.max(lid, 0.28), dy: -0.08, rot: 0.08 }), undefined, 0.25, 0, 1);
     case 'sad':
-      return both(
-        pill({ w: 0.08, h: 0.17, lid: 0.3, lidAng: -0.5, dy: -0.015 }),
-        pill({ w: 0.08, h: 0.17, lid: 0.3, lidAng: 0.5, dy: -0.015 }),
-      );
+      return face2(open({ lid: 0.3, lidAng: -0.45, dy: -0.04 }), undefined, -0.6, 0);
     case 'angry':
-      return both(pill({ w: 0.09, h: 0.18, lid: 0.46, lidAng: 0.62 }), pill({ w: 0.09, h: 0.18, lid: 0.46, lidAng: -0.62 }));
+      return face2(open({ lid: 0.46, lidAng: 0.62 }), undefined, -0.4, 0);
+    case 'sleepy':
+      return face2(open({ lid: 0.62 }), undefined, 0, 0);
     case 'love':
-      return both(eye(HEART, 0.0, 0.17, { dy: 0.005 }));
+      return face2(eye(HEART), eye(HEART), 0.6, 0.2, 0.7);
     case 'starstruck':
-      return both(eye(STAR, 0.0, 0.22));
+      return face2(eye(STAR), eye(STAR), 0.4, 0.6, 0.3);
     case 'dizzy':
-      return both(eye(SPIRAL, 0.03, 0.2));
+      return face2(eye(SPIRAL), eye(SPIRAL), 0, 0.3);
     case 'laugh':
-      return both(eye(CHEVRON, 0.045, 0.16), eye(CHEVRON, 0.045, 0.16, { rot: Math.PI }));
-    case 'skeptical':
-      return both(pill({ lid: 0.45 }), pill({ h: 0.22, rot: tilt - 0.12 }));
-    case 'error':
-      return both(eye(X, 0.042, 0.16));
+    case 'squeeze':
+      return face2(eye(CHEVRON), eye(CHEVRON), 0.9, 0.85, 0.5);
+    case 'content':
+      return face2(eye(LINE), eye(LINE), 0.5, 0, 0.5);
+    case 'gameover':
+      return face2(eye(X), eye(X), -0.3, 0.3);
+    case 'frightened':
+      return ghost
+        ? face2(eye(SMALL), eye(SMALL), 0, 0)
+        : face2(eye(OPEN, { w: 1.06, h: 1.14, rot: -0.55 }), undefined, -0.3, 1);
     default:
-      return both(pill());
+      return face2(open());
   }
 };
 
 const base = (o: Partial<ArcadeConfig>): ArcadeConfig => ({
-  name: 'Chompers',
+  name: 'Chomper',
   state: 'idle',
   expression: 'neutral',
-  shape: 0,
-  sides: 5,
-  roundness: 0.6,
-  aspect: 1,
-  bulge: 0,
-  waves: 0,
-  waveCount: 6,
-  tilt: 0,
-  thickness: 0.2,
-  inflate: 0.05,
-  color: '#EE7330',
-  material: 'soft',
-  eyeSize: 1,
-  eyeSpacing: 1,
-  eyeHeight: 0.02,
-  eyeTilt: 0,
-  eyeColor: 'auto',
+  kind: 0,
+  color: '#FFD21F',
+  eyeStyle: 0,
+  mouthSize: 1,
+  gear: 0,
+  gearColor: '#E8202E',
+  scallops: 4,
+  accessory: 0,
+  accColor: '#E8202E',
+  glow: 0.35,
+  facing: 22,
   ...o,
 });
 
-// Composition after the reference pile (9 bots resting on each other).
-const PILE: Placement[] = [
-  { pos: [-1.92, 0.0, 0.18], scale: 1.03, yaw: 0.06 },
-  { pos: [-1.36, 0.82, -0.12], scale: 0.98, yaw: 0.0 },
-  { pos: [-0.34, 0.82, -0.12], scale: 0.95, yaw: -0.05 },
-  { pos: [0.48, 1.44, -0.3], scale: 0.85, yaw: 0.05 },
-  { pos: [-0.84, 0.0, 0.2], scale: 1.1, yaw: 0.03 },
-  { pos: [0.33, 0.02, 0.22], scale: 1.13, yaw: -0.03 },
-  { pos: [1.16, 0.62, -0.1], scale: 0.97, yaw: -0.06 },
-  { pos: [1.14, 0.02, 0.32], scale: 0.56, yaw: 0.0 },
-  { pos: [1.94, 0.02, 0.16], scale: 0.98, yaw: -0.08 },
-];
+/** per-kind geometry the shader and the TS side agree on */
+const CHOMP_R = 0.42;
+const GHOST_R = 0.36;
+
+const conj = (q: Quat): Quat => [-q[0], -q[1], -q[2], q[3]];
+
+/** a burst of three chomps every few seconds while idle */
+const idleBurst = (ph: number): number => {
+  const cyc = ph % 4.6;
+  if (cyc > 1.2) return 0;
+  return Math.sin((cyc / 1.2) * Math.PI * 3) ** 2;
+};
 
 export const arcade: FamilyDef<ArcadeConfig> = {
   id: 'arcade',
-  name: 'Grok Bot',
+  name: 'Chompers',
   maker: 'Maze arcade',
-  tagline: 'Simple geometric forms · near-infinite shape variations · motion-based state expression',
+  tagline: 'Glossy arcade toys · one chomp, one glance · states you can read from across the room',
   shader,
   anchors: 0,
-  background: '#F3F4F6',
-  dark: false,
-  traits: ['Simple geometric forms', 'Near-infinite shape variations', 'Motion-based state expression'],
+  background: 'radial-gradient(120% 95% at 50% 30%, #1B2160 0%, #0D1035 55%, #05061A 100%)',
+  backgroundSolid: '#0D1035',
+  dark: true,
+  traits: ['Glossy toy plastic with a neon rim', 'Chomping, peeking, frightened: readable states', 'Maze props: dots, pellets, fruit'],
   look: {
-    dark: false,
-    groundShadow: 0.3,
-    exposure: 1.0,
+    dark: true,
+    groundShadow: 0.22,
+    exposure: 1.05,
     groundY: 0,
     lights: {
-      key: normalize([-0.45, 0.78, 0.62]),
-      keyI: 1.0,
-      rim: normalize([0.55, 0.45, -0.7]),
-      rimI: 0.7,
-      fill: normalize([0.75, 0.1, 0.65]),
-      fillI: 0.22,
-      sky: [0.42, 0.43, 0.46],
-      ground: [0.2, 0.195, 0.19],
-      warm: [1.0, 0.97, 0.93],
-      env: 0.9,
+      key: normalize([-0.5, 0.75, 0.62]),
+      keyI: 1.15,
+      rim: normalize([0.55, 0.4, -0.72]),
+      rimI: 1.35,
+      fill: normalize([0.8, 0.05, 0.6]),
+      fillI: 0.3,
+      sky: [0.2, 0.22, 0.36],
+      ground: [0.05, 0.05, 0.1],
+      warm: [1.0, 0.96, 0.9],
+      env: 1.0,
     },
   },
   defaultState: 'idle',
   states: {
-    idle: { label: 'Idle', hint: 'Calm and slightly curious', bob: [0.01, 0.4], squash: [0.012, 0.4] },
-    thinking: { label: 'Thinking', hint: 'Looks up while the dots pulse', expr: 'curious', gaze: 'up', props: { dots: 1 }, bob: [0.012, 0.6], sway: [0.05, 0.35] },
-    working: { label: 'Working', hint: 'Kicks into gear', expr: 'focused', bob: [0.05, 2.1], squash: [0.065, 2.1], lean: 0.07, enter: 'nod' },
-    waiting: { label: 'Waiting', hint: 'Patient sway, glancing at you', expr: 'neutral', gaze: 'user', sway: [0.06, 0.45], bob: [0.008, 0.45] },
-    blocked: { label: 'Needs help', hint: 'Shakes and asks for input', expr: 'sad', shake: 0.09, enter: 'shake', emote: ['question', 2.4] },
-    done: { label: 'Done', hint: 'Celebrates, then settles', expr: 'happy', enter: 'celebrate', bob: [0.01, 0.5], emote: ['check', 3.6] },
-    orbit: { label: 'Long task', hint: 'Rings orbit during long-running work', expr: 'focused', props: { rings: 1 }, bob: [0.015, 0.8] },
-    paused: { label: 'Paused', hint: 'Dozes until it is needed', expr: 'sleepy', gaze: 'closed', squash: [0.035, 0.25], sink: 0.02, emote: ['zzz', 2.8] },
+    idle: { label: 'Idle', hint: 'Bobs and chomps now and then', bob: [0.012, 0.45], squash: [0.014, 0.45], props: {} },
+    listening: { label: 'Listening', hint: 'Leans in, mouth ajar', expr: 'listening', gaze: 'user', lean: 0.1, bob: [0.006, 0.5], props: { shut: 0.35 } },
+    thinking: { label: 'Thinking', hint: 'Looks up and ponders', expr: 'curious', gaze: 'up', arms: 'think', sway: [0.05, 0.35], bob: [0.01, 0.6], props: { shut: 0.85 }, emote: ['question', 2.6] },
+    working: { label: 'Working', hint: 'Chomps along a row of dots', expr: 'focused', bob: [0.03, 2.4], squash: [0.035, 2.4], props: { dots: 1, chomp: 1 } },
+    speaking: { label: 'Speaking', hint: 'Mouth moves with the voice', expr: 'happy', talk: 1, gaze: 'user', arms: 'wave', bob: [0.012, 1.1], props: { shut: 0.8 } },
+    done: { label: 'Done', hint: 'Spins and grabs a bonus fruit', expr: 'happy', enter: 'celebrate', arms: 'cheer', bob: [0.012, 0.5], props: { gape: 0.5, fruit: 1 }, emote: ['check', 3.6] },
+    sleeping: { label: 'Sleeping', hint: 'Dozes with its mouth shut', expr: 'sleepy', gaze: 'closed', squash: [0.035, 0.25], sink: 0.03, props: { shut: 1 }, emote: ['zzz', 2.8] },
+    powerup: { label: 'Power-up', hint: 'Ate a power pellet: grows and glows', expr: 'mischief', enter: 'hop', arms: 'rally', bob: [0.02, 1.6], squash: [0.03, 3.2], props: { power: 1, chomp: 1 }, emote: ['sparkle', 1.8] },
+    frightened: { label: 'Frightened', hint: 'Ghosts turn blue, chompers jump', expr: 'frightened', enter: 'hop', arms: 'cheer', shake: 0.05, bob: [0.02, 1.4], props: { fright: 1, gape: 0.8 }, emote: ['sweat', 2.4] },
   },
   personality: {
-    body: [2.1, 0.5, 1.4],
+    body: [2.0, 0.5, 1.2],
     eyes: [5.0, 0.75, 0.0],
-    squash: [320, 8.5],
-    reach: [0.5, 0.32],
+    squash: [300, 8.5],
+    reach: [0.35, 0.25],
     eyeShare: 0.6,
-    hopGravity: 15,
+    hopGravity: 14,
   },
   expressions: EXPRESSIONS,
   schema: [
@@ -213,112 +222,132 @@ export const arcade: FamilyDef<ArcadeConfig> = {
       ],
     },
     {
+      id: 'character',
+      title: 'Character',
+      controls: [
+        { type: 'icons', key: 'kind', label: 'Kind', options: KINDS },
+        { type: 'swatches', key: 'color', label: 'Body colour', colors: ARCADE_COLORS, custom: true },
+        {
+          type: 'chips',
+          key: 'eyeStyle',
+          label: 'Eyes',
+          options: [
+            { value: 0, label: 'Big' },
+            { value: 1, label: 'None' },
+            { value: 2, label: 'Sleepy' },
+            { value: 3, label: 'Angry' },
+          ],
+        },
+        { type: 'select', key: 'expression', label: 'Expression', options: EXPRESSIONS },
+      ],
+    },
+    {
       id: 'shape',
       title: 'Shape',
       controls: [
-        { type: 'icons', key: 'shape', label: 'Silhouette', options: GROK_SHAPES },
-        { type: 'slider', key: 'sides', label: 'Polygon sides', min: 3, max: 10, step: 1, when: (c) => c.shape === 8 },
-        { type: 'slider', key: 'roundness', label: 'Corner roundness', min: 0, max: 1, step: 0.01 },
-        { type: 'slider', key: 'aspect', label: 'Width', min: 0.7, max: 1.45, step: 0.01 },
-        { type: 'slider', key: 'bulge', label: 'Bulge', min: 0, max: 1, step: 0.01 },
-        { type: 'slider', key: 'waves', label: 'Wobbly edge', min: 0, max: 0.06, step: 0.001 },
-        { type: 'slider', key: 'waveCount', label: 'Wobble count', min: 3, max: 12, step: 1, when: (c) => c.waves > 0.001 },
-        { type: 'slider', key: 'tilt', label: 'Tilt', min: -35, max: 35, step: 1, unit: '°' },
-        { type: 'slider', key: 'thickness', label: 'Depth', min: 0.1, max: 0.34, step: 0.01 },
-        { type: 'slider', key: 'inflate', label: 'Inflate', min: 0, max: 0.14, step: 0.005 },
+        { type: 'slider', key: 'mouthSize', label: 'Mouth size', min: 0.5, max: 1.4, step: 0.01, when: (c) => c.kind === 0 },
+        {
+          type: 'chips',
+          key: 'gear',
+          label: 'Boots & gloves',
+          when: (c) => c.kind === 0,
+          options: [
+            { value: 0, label: 'None' },
+            { value: 1, label: 'Boots' },
+            { value: 2, label: 'Boots + gloves' },
+          ],
+        },
+        { type: 'swatches', key: 'gearColor', label: 'Boot colour', colors: GEAR_COLORS, custom: true, when: (c) => c.kind === 0 && c.gear > 0 },
+        {
+          type: 'chips',
+          key: 'scallops',
+          label: 'Skirt scallops',
+          when: (c) => c.kind === 1,
+          options: [
+            { value: 3, label: '3' },
+            { value: 4, label: '4' },
+            { value: 5, label: '5' },
+          ],
+        },
+        { type: 'slider', key: 'facing', label: 'Facing', min: -45, max: 45, step: 1, unit: '°' },
       ],
     },
     {
-      id: 'color',
-      title: 'Colour & material',
+      id: 'style',
+      title: 'Style',
       controls: [
-        { type: 'swatches', key: 'color', label: 'Colour', colors: GROK_COLORS, custom: true },
         {
           type: 'chips',
-          key: 'material',
-          label: 'Material',
+          key: 'accessory',
+          label: 'Accessory',
           options: [
-            { value: 'flat', label: 'Flat' },
-            { value: 'soft', label: 'Soft-touch' },
-            { value: 'clay', label: 'Clay' },
-            { value: 'gloss', label: 'Gloss' },
+            { value: 0, label: 'None' },
+            { value: 1, label: 'Bow' },
+            { value: 2, label: 'Cap' },
+            { value: 3, label: 'Sunglasses' },
+            { value: 4, label: 'Crown' },
           ],
         },
-      ],
-    },
-    {
-      id: 'face',
-      title: 'Eyes',
-      controls: [
-        { type: 'select', key: 'expression', label: 'Expression', options: EXPRESSIONS },
-        { type: 'slider', key: 'eyeSize', label: 'Size', min: 0.6, max: 1.5, step: 0.01 },
-        { type: 'slider', key: 'eyeSpacing', label: 'Spacing', min: 0.6, max: 1.5, step: 0.01 },
-        { type: 'slider', key: 'eyeHeight', label: 'Height', min: -0.12, max: 0.16, step: 0.005 },
-        { type: 'slider', key: 'eyeTilt', label: 'Slant', min: -25, max: 25, step: 1, unit: '°' },
-        {
-          type: 'chips',
-          key: 'eyeColor',
-          label: 'Eye colour',
-          options: [
-            { value: 'auto', label: 'Auto' },
-            { value: 'white', label: 'White' },
-            { value: 'ink', label: 'Ink' },
-          ],
-        },
+        { type: 'swatches', key: 'accColor', label: 'Accessory colour', colors: ACC_COLORS, custom: true, when: (c) => c.accessory === 1 || c.accessory === 2 },
+        { type: 'slider', key: 'glow', label: 'Neon glow', min: 0, max: 1, step: 0.01 },
       ],
     },
   ],
   roster: () => [
-    base({ name: 'Ember', shape: 0, color: '#EE7330', eyeTilt: 14, expression: 'neutral' }),
-    base({ name: 'Onyx', shape: 0, color: '#141414', eyeTilt: 18, material: 'gloss' }),
-    base({ name: 'Tide', shape: 2, color: '#4DB8A4', roundness: 0.75, tilt: -6 }),
-    base({ name: 'Iris', shape: 2, color: '#8B5CF6', roundness: 0.85, tilt: 22, eyeSize: 0.75, expression: 'curious' }),
-    base({ name: 'Puff', shape: 6, color: '#F2A03D', aspect: 1.05, eyeTilt: 8 }),
-    base({ name: 'Peak', shape: 4, color: '#EC4899', roundness: 0.9, eyeSize: 0.8, eyeHeight: -0.04 }),
-    base({ name: 'Cobalt', shape: 2, color: '#3B82F6', roundness: 0.55, tilt: -14, expression: 'surprised', eyeSize: 0.85 }),
-    base({ name: 'Drip', shape: 7, color: '#6B7280', tilt: 32, eyeSize: 0.8, eyeHeight: -0.06, expression: 'surprised' }),
-    base({ name: 'Cocoa', shape: 0, color: '#8B6B4A', eyeTilt: 16, eyeSize: 1.25 }),
+    base({ name: 'Munch', kind: 0, color: '#FFD21F', gear: 1, facing: 24 }),
+    base({ name: 'Bitsy', kind: 0, color: '#FF7FC4', accessory: 1, accColor: '#E8202E', facing: -20, mouthSize: 0.85, expression: 'happy' }),
+    base({ name: 'Ruckus', kind: 1, color: '#FF3B3B', eyeStyle: 3, accessory: 2, accColor: '#2B59FF', scallops: 4, facing: 12, expression: 'mischief' }),
+    base({ name: 'Wisp', kind: 1, color: '#3FE0F0', eyeStyle: 0, scallops: 3, facing: -14, expression: 'shy' }),
+    base({ name: 'Tango', kind: 1, color: '#FFA53D', accessory: 3, scallops: 5, facing: -6, glow: 0.5 }),
   ],
-  randomize: (c, rnd) => ({
-    ...c,
-    shape: Math.floor(rnd() * GROK_SHAPES.length),
-    sides: 3 + Math.floor(rnd() * 6),
-    roundness: 0.3 + rnd() * 0.7,
-    aspect: 0.85 + rnd() * 0.35,
-    bulge: rnd() < 0.3 ? rnd() * 0.5 : 0,
-    waves: rnd() < 0.2 ? rnd() * 0.035 : 0,
-    tilt: Math.round((rnd() - 0.5) * 40),
-    color: GROK_COLORS[Math.floor(rnd() * GROK_COLORS.length)],
-    material: ['flat', 'soft', 'soft', 'clay', 'gloss'][Math.floor(rnd() * 5)],
-    expression: EXPRESSIONS[Math.floor(rnd() * 8)].value as string,
-    eyeSize: 0.75 + rnd() * 0.5,
-    eyeSpacing: 0.8 + rnd() * 0.4,
-    eyeTilt: Math.round((rnd() - 0.5) * 30),
-  }),
-  compose: (n, aspect, compact) => {
-    if (n <= PILE.length && aspect >= 1.05 && !compact) {
-      // the signature pile, framed near-orthographically
-      const fov = deg(18);
-      const w = 5.5, h = 2.85;
-      const halfH = Math.max(h / 2, w / 2 / aspect);
-      const dist = halfH / Math.tan(fov / 2);
-      return { placements: PILE.slice(0, n), camera: { pos: [0.02, 1.12 + halfH * 0.12, dist], target: [0.02, 1.12, 0], fov } };
-    }
-    if (n <= PILE.length && compact && aspect >= 0.9) {
-      const fov = deg(18);
-      const w = 5.3, h = 2.8;
-      const halfH = Math.max(h / 2, w / 2 / aspect);
-      const dist = halfH / Math.tan(fov / 2);
-      return { placements: PILE.slice(0, n), camera: { pos: [0.02, 1.1 + halfH * 0.12, dist], target: [0.02, 1.1, 0], fov } };
-    }
-    return groupPhoto(n, aspect, { gap: 1.15, charW: 1.05, charH: 1.0, riser: 0.62, depth: 0.5, fov: deg(18), margin: 0.12, turn: 0.02, lift: 0.1 });
+  onChange: (c, key, value) => {
+    if (key !== 'kind') return null;
+    if (value === 1 && c.color === '#FFD21F') return { ...c, kind: 1, color: '#FF3B3B', eyeStyle: c.eyeStyle === 1 ? 0 : c.eyeStyle };
+    if (value === 0 && GHOST_QUARTET.includes(c.color)) return { ...c, kind: 0, color: '#FFD21F' };
+    if (value === 1 && c.eyeStyle === 1) return { ...c, kind: 1, eyeStyle: 0 };
+    return null;
   },
-  solo: (aspect) => soloCamera(aspect, 1.15, 1.0, deg(18), 0.1),
-  subtitle: 'xAI · persistent agents with a geometric identity',
-  headLocal: () => [0, 0.55, 0.15],
+  randomize: (c, rnd) => {
+    const kind = rnd() < 0.45 ? 0 : 1;
+    const pick = <T>(a: T[]): T => a[Math.floor(rnd() * a.length)];
+    return {
+      ...c,
+      kind,
+      color: kind === 1 && rnd() < 0.6 ? pick(GHOST_QUARTET) : kind === 0 && rnd() < 0.5 ? '#FFD21F' : pick(ARCADE_COLORS),
+      eyeStyle: kind === 0 ? pick([0, 0, 0, 1, 2, 3]) : pick([0, 0, 2, 3]),
+      mouthSize: 0.75 + rnd() * 0.5,
+      gear: kind === 0 ? pick([0, 1, 2]) : 0,
+      gearColor: pick(GEAR_COLORS),
+      scallops: pick([3, 4, 5]),
+      accessory: rnd() < 0.55 ? 1 + Math.floor(rnd() * 4) : 0,
+      accColor: pick(ACC_COLORS),
+      glow: rnd() * 0.7,
+      facing: Math.round((rnd() - 0.5) * 60),
+      expression: pick(['neutral', 'neutral', 'happy', 'mischief', 'shy', 'curious']),
+    };
+  },
+  compose: (n, aspect, compact) =>
+    groupPhoto(n, aspect, {
+      gap: compact ? 1.1 : 1.18,
+      charW: 1.08,
+      charH: 1.12,
+      riser: 0.5,
+      depth: 0.6,
+      fov: deg(22),
+      margin: compact ? 0.08 : 0.14,
+      turn: 0.05,
+      lift: 0.15,
+    }),
+  solo: (aspect) => soloCamera(aspect, 1.2, 1.12, deg(22), 0.15),
+  subtitle: 'Maze arcade · chompers and ghosts as glossy toys',
+  headLocal: (c) => (c.kind === 1 ? [0, 0.62, 0.3] : [0, 0.6, 0.3]),
   bounds: (c) => {
-    const r = 0.64 * Math.max(c.aspect, 1) + 0.06;
-    return { c: [0, 0.5, 0], r: Math.max(r, 0.98), occ: [[0, 0.46, 0, 0.4]] };
+    // dots row in front of the mouth while working, fruit beside the body when done
+    let r = 0.6;
+    if (c.accessory === 4 || c.accessory === 1 || c.accessory === 2) r = 0.64;
+    if (c.state === 'done') r = 0.9;
+    if (c.state === 'working') r = 1.04;
+    return { c: [0, 0.5, 0], r, occ: [[0, 0.46, 0, 0.38]] };
   },
   face: arcadeFace,
   pack: (c: ArcadeConfig, pose: Pose, f: CharFrame, face: FaceTarget) => {
@@ -330,52 +359,104 @@ export const arcade: FamilyDef<ArcadeConfig> = {
       d[k * 4 + 2] = cc;
       d[k * 4 + 3] = dd;
     };
-    const m = pose.morph;
-    const ease = m * m * (3 - 2 * m);
-    const from = c._from && m < 1 ? c._from : c;
-    set(0, from.shape, from.roundness, from.aspect, from.sides);
-    set(1, c.shape, c.roundness, c.aspect, c.sides);
-    set(2, m < 1 ? ease : 0, deg(c.tilt), c.thickness, c.inflate);
-    const col = hexToLinear(c.color);
-    const matIdx = ['flat', 'soft', 'clay', 'gloss'].indexOf(c.material);
-    set(3, col[0], col[1], col[2], Math.max(0, matIdx));
+    const ghost = c.kind === 1 ? 1 : 0;
+    const P = pose.props;
+    const ph = pose.phase;
+    const dots = P.dots ?? 0, chomp = P.chomp ?? 0, power = P.power ?? 0, fright = P.fright ?? 0;
+    const fruit = P.fruit ?? 0, shut = P.shut ?? 0, gape = P.gape ?? 0;
 
-    const size = c.eyeSize * (1 + 0.08 * pose.excite);
-    const sx = 0.125 * c.eyeSpacing;
-    const lookX = pose.lookX * 0.075;
-    const lookY = pose.lookY * 0.05;
-    const squeeze = 1 - 0.18 * Math.abs(pose.lookX);
+    // power-up: the character grows a size
+    f.scale *= 1 + 0.12 * power + 0.015 * power * Math.sin(ph * 9);
+
+    // facing: resting turn + follow the cursor + turn along the dot row while working
+    const R = ghost ? GHOST_R : CHOMP_R;
+    const side = c.facing < 0 ? -1 : 1;
+    const turn = ghost ? deg(c.facing) * 0.7 * (1 - dots) : deg(c.facing) * (1 - dots) + clamp(pose.headYaw * 0.35, -0.25, 0.25) * (1 - 0.6 * dots);
+    const fy = clamp(turn + dots * side * (ghost ? 0.75 : 0.95), -1.3, 1.3);
+
+    // the dot row scrolls one dot per chomp; the mouth shuts as each dot arrives
+    const SP = 0.2;
+    const scroll = ph * 0.62;
+    const z0 = R * 0.62;
+    const u = (((z0 + scroll) / SP) % 1 + 1) % 1;
+    const synced = 0.5 - 0.5 * Math.cos(Math.PI * 2 * (u - 0.5));
+    // the idle mouth rests half open with a burst of chomps now and then; states shut it,
+    // open it wider or take over with a steady chomp
+    const busy = clamp(shut + gape + chomp + power + fright + dots, 0, 1);
+    let open = 0.5 * (1 - shut) * (1 - chomp) + gape * 0.5 + chomp * synced + (1 - busy) * idleBurst(ph) * 0.45;
+    open += pose.talk * 0.85 + face.mouthOpen * 0.35;
+    open = clamp(open, 0.05, 1.15);
+    const alpha = 0.48 * c.mouthSize * open;
+    set(0, ghost, fy, alpha, alpha * 0.55);
+
+    const col = hexToLinear(c.color);
+    set(1, col[0], col[1], col[2], c.glow);
+
+    // eyes: chompers place them by azimuth / elevation on the sphere, ghosts on the front plane
+    // "None": eyeless chompers / faceless ghosts (a frightened ghost always shows its little eyes)
+    const eyesOn = c.eyeStyle === 1 && !(ghost && fright > 0.5) ? 0 : 1;
     const blink = pose.blink;
-    const packEye = (e: EyeSpec, side: number, kc: number, ka: number) => {
-      let w = e.w * size * squeeze;
-      let h = e.h * size;
-      if (e.kind === PILL || e.kind === OVAL) {
-        const closed = Math.max(w * 0.42, h * (1 - 0.92 * blink));
-        h = closed;
-        w *= 1 + 0.25 * blink;
+    const size = 1 + 0.06 * pose.excite;
+    const look: [number, number] = [clamp(pose.lookX - fy * 0.5, -1, 1), clamp(pose.lookY, -1, 1)];
+    const packEye = (e: EyeSpec, s: number, kc: number, ka: number) => {
+      const w = (ghost ? 0.1 : 0.094) * e.w * size;
+      let h = (ghost ? 0.13 : 0.126) * e.h * size;
+      let lid = e.lid;
+      if (e.kind === OPEN || e.kind === SMALL) lid = Math.max(lid, blink);
+      else h *= 1 - 0.5 * blink;
+      if (ghost) {
+        // arcade ghosts shift their whites a little towards where they look
+        set(kc, s * 0.128 + e.dx * 0.1 + look[0] * 0.022, 0.045 + e.dy * 0.1 + look[1] * 0.015, w, h);
       } else {
-        h *= 1 - 0.5 * blink;
+        set(kc, s * 0.3 + e.dx, 0.64 + e.dy, w, h);
       }
-      const cx = side * sx + e.dx + lookX;
-      const cy = c.eyeHeight + e.dy + lookY;
-      set(kc, cx, cy, w, h);
-      set(ka, e.rot, e.kind, e.lid, e.lidAng);
+      // frightened ghosts always get the little arcade eyes, whatever the expression
+      set(ka, ghost && fright > 0.5 ? SMALL : e.kind, clamp(lid, 0, 1), e.lidAng, e.rot);
     };
-    packEye(face.l, -1, 4, 6);
-    packEye(face.r, 1, 5, 7);
-    const ink = c.eyeColor === 'ink' || (c.eyeColor === 'auto' && relLuminance(c.color) > 0.5);
-    const ec: Vec3 = ink ? [0.012, 0.012, 0.014] : [0.96, 0.96, 0.95];
-    set(8, ec[0], ec[1], ec[2], face.lidB);
+    packEye(face.l, -1, 2, 4);
+    packEye(face.r, 1, 3, 5);
+    set(6, look[0], look[1], eyesOn, clamp(face.cheeks, 0, 1));
+
+    const ac = hexToLinear(c.accColor);
+    set(7, c.accessory, ac[0], ac[1], ac[2]);
+    const k = Math.round(c.scallops) * 2;
+    // the hem ripples: a sway of the scallops plus a faster flutter when busy
+    const hemPhase = (Math.round(c.scallops) % 2 === 1 ? 0 : Math.PI / 2) + Math.sin(ph * 3.4) * 0.45 + ph * (0.6 + 1.6 * (dots + power + fright));
+    set(8, ghost ? 0 : c.gear, k, hemPhase, 0.085);
     set(9, pose.poke[0], pose.poke[1], pose.poke[2], pose.pokeAmp);
-    set(10, pose.wobble * 1.4, pose.wobblePhase, 9, 0);
-    const rings = pose.props.rings ?? 0;
-    const dots = pose.props.dots ?? 0;
-    set(11, rings, pose.phase * 1.4, dots, pose.phase * 6.5);
-    set(12, c.bulge, c.waves, c.waveCount, pose.phase * 0.0);
-    set(13, 0.55, 0, 0, 0);
-    const rc = hexToLinear(c.color);
-    set(14, rc[0] * 0.55 + 0.25, rc[1] * 0.55 + 0.25, rc[2] * 0.55 + 0.25, 1);
+
+    // frightened ghosts flash white near the end of each blue spell
+    const cyc = ph % 6;
+    const flash = ghost && fright > 0.5 && cyc > 4.2 ? (Math.sin(ph * 22) > 0 ? 1 : 0) : 0;
+    set(10, pose.wobble * 1.2, pose.wobblePhase, ghost ? fright : 0, flash);
+    set(11, dots, scroll, fruit, ph);
+
+    // view direction in the local frame (for the neon rim; the camera sits in front)
+    const v = quatRotate(conj(f.rot), normalize([0, 0.25, 1]));
+    set(12, v[0], v[1], v[2], ph);
+    set(13, face.mouth, Math.max(face.mouthOpen, pose.talk), power, 0);
+    // neon rim: the blue of the maze walls with a hint of the body colour
+    const g = col.map((x, i) => [0.12, 0.32, 1.0][i] * 0.75 + x * 0.25) as Vec3;
+    set(14, g[0], g[1], g[2], 0.5 + 0.5 * Math.sin(ph * 10));
+    const pup = ghost ? hexToLinear('#2340E0') : hexToLinear('#14121C');
+    set(15, pup[0], pup[1], pup[2], 1);
+    const gc = hexToLinear(c.gearColor);
+    set(16, gc[0], gc[1], gc[2], ghost ? 0 : Math.sin(ph * 12) * 0.035 * (dots + chomp * 0.3));
+
+    // floating gloves follow the arm pose (raise angle around the body)
+    const A = pose.arms;
+    const wave = A.wave * Math.sin(ph * 10) * 0.35;
+    const glove = (raise: number, fwd: number, s: number, extra: number) => {
+      const a = Math.min(1.05 + raise * 0.72, 2.4) + extra;
+      const rr = R + 0.1;
+      return [s * rr * Math.sin(a), -rr * Math.cos(a) * 0.9, 0.06 + fwd * 0.12] as Vec3;
+    };
+    const tap = A.tap * Math.sin(ph * 14) * 0.15;
+    const gl = glove(A.lRaise, A.lFwd, -1, -tap);
+    const gr = glove(A.rRaise, A.rFwd, 1, tap + wave);
+    set(17, gl[0], gl[1], gl[2], c.gear === 2 && !ghost ? 0.078 : 0);
+    set(18, gr[0], gr[1], gr[2], c.gear === 2 && !ghost ? 0.078 : 0);
   },
 };
 
-export type GrokAvatar = Avatar<ArcadeConfig>;
+export type ArcadeAvatar = Avatar<ArcadeConfig>;
