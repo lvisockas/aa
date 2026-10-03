@@ -31,8 +31,8 @@ low-poly ones, and Canvas2D for the 2D styles.
 | Bugs | marker-and-gouache picture books | Streaky painted critters on stick legs, with feelers, googly eyes, patterned wings and many body types |
 | Pocket pets | 90s virtual pets (Tamagotchi-style) | An egg-shaped keychain with a dot-matrix LCD: a pixel pet hatches, wanders, eats, gets sick and sleeps with the lights off |
 
-**Live: https://lvisockas.github.io/aa/** (deployed from `main` by `.github/workflows/pages.yml`), or open
-`dist/index.html` in any modern browser. It's a single self-contained file.
+**Live: https://lvisockas.github.io/aa/** (GitHub Pages serves `main`; the root page forwards to `dist/`, so
+routes like https://lvisockas.github.io/aa/#crew work), or open `dist/index.html` in any modern browser. It's a single self-contained file.
 
 ## What you can do
 
